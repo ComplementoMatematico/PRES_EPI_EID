@@ -1,0 +1,1043 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Simulador Epidemiológico</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Inter:wght@300;400;600;700;800&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg:        #0b0f1a;
+    --surface:   #111827;
+    --border:    #1f2d40;
+    --s-color:   #3b82f6;
+    --i-color:   #ef4444;
+    --i-color-2: #f97316;
+    --r-color:   #22c55e;
+    --text:      #e2e8f0;
+    --muted:     #64748b;
+    --mono:      'Share Tech Mono', monospace;
+    --sans:      'Inter', sans-serif;
+  }
+
+  html, body { height: 100%; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* ── Header ── */
+  header {
+    flex: 0 0 auto;
+    padding: 12px 32px;
+    border-bottom: 1px solid var(--border);
+    background: linear-gradient(90deg, #0b0f1a 0%, #0f1e2e 100%);
+    position: relative;
+    overflow: hidden;
+  }
+  header::before {
+    content: '';
+    position: absolute; inset: 0;
+    background: radial-gradient(ellipse 60% 80% at 10% 50%, rgba(59,130,246,.08) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  .header-inner {
+    max-width: 1600px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+  }
+  h1 {
+    font-size: clamp(1rem, 2.2vw, 1.4rem);
+    font-weight: 700;
+    letter-spacing: .04em;
+    color: #fff;
+  }
+  h1 span { color: var(--s-color); }
+  .subtitle {
+    font-size: .68rem;
+    color: var(--muted);
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    margin-top: 2px;
+  }
+  .badge {
+    font-family: var(--mono);
+    font-size: .68rem;
+    padding: 4px 10px;
+    border-radius: 4px;
+    border: 1px solid var(--border);
+    color: var(--muted);
+  }
+
+  /* ── Layout ── */
+  main {
+    flex: 1 1 auto;
+    min-height: 0;
+    max-width: 1600px;
+    margin: 0 auto;
+    width: 100%;
+    padding: 14px 20px;
+    display: grid;
+    grid-template-columns: 1fr 288px;
+    grid-template-rows: auto 1fr 140px;
+    gap: 12px;
+  }
+
+  /* ── Stats bar ── */
+  .stats-bar {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr) auto auto;
+    gap: 10px;
+  }
+  .stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    position: relative;
+    overflow: hidden;
+  }
+  .stat-dot {
+    width: 13px; height: 13px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    box-shadow: 0 0 8px currentColor;
+  }
+  .stat-dot.s { background: var(--s-color); color: var(--s-color); }
+  .stat-dot.i { background: var(--i-color); color: var(--i-color); }
+  .stat-dot.r { background: var(--r-color); color: var(--r-color); }
+  .stat-label { font-size: .68rem; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
+  .stat-value {
+    font-family: var(--mono);
+    font-size: 1.35rem;
+    font-weight: 700;
+    line-height: 1;
+    margin-top: 2px;
+    transition: text-shadow .3s, transform .2s;
+  }
+  .stat-value.s { color: var(--s-color); }
+  .stat-value.i { color: var(--i-color); }
+  .stat-value.r { color: var(--r-color); }
+  .stat-value.pulse { animation: statPulse .5s ease-out; }
+  @keyframes statPulse {
+    0%   { transform: scale(1.35); }
+    100% { transform: scale(1); }
+  }
+
+  .ctrl-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px 12px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 6px;
+    min-width: 96px;
+  }
+  .ctrl-card button {
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: .76rem;
+    padding: 5px 10px;
+    cursor: pointer;
+    transition: background .15s, border-color .15s;
+    white-space: nowrap;
+  }
+  .ctrl-card button:hover { background: #1f2d40; border-color: var(--s-color); }
+  .ctrl-card button.primary {
+    background: var(--s-color);
+    border-color: var(--s-color);
+    color: #fff;
+    font-weight: 600;
+  }
+  .ctrl-card button.primary:hover { background: #2563eb; }
+  .ctrl-card button.danger { border-color: var(--i-color); color: var(--i-color); }
+  .ctrl-card button.danger:hover { background: rgba(239,68,68,.15); }
+
+  /* ── Canvas (protagonista del layout) ── */
+  #canvas-wrap {
+    grid-column: 1;
+    grid-row: 2;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+    position: relative;
+    min-height: 0;
+  }
+  canvas#sim { display: block; width: 100%; height: 100%; }
+
+  /* ── Chart ── */
+  #chart-wrap {
+    grid-column: 1;
+    grid-row: 3;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 16px;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+  }
+  .chart-title {
+    font-size: .66rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    margin-bottom: 6px;
+    flex: 0 0 auto;
+  }
+  #chart { flex: 1 1 auto; width: 100% !important; height: 100% !important; }
+
+  /* ── Right panel ── */
+  .panel {
+    grid-column: 2;
+    grid-row: 2 / 4;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    min-height: 0;
+    overflow-y: auto;
+    padding-right: 2px;
+  }
+  .panel::-webkit-scrollbar { width: 5px; }
+  .panel::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+  .panel-box {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px 16px;
+    flex: 0 0 auto;
+  }
+  .panel-box h3 {
+    font-size: .66rem;
+    text-transform: uppercase;
+    letter-spacing: .07em;
+    color: var(--muted);
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .panel-box h3::before {
+    content: '';
+    display: inline-block;
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: var(--s-color);
+    box-shadow: 0 0 6px var(--s-color);
+  }
+
+  /* ── Cronómetro ── */
+  .chrono-wrap { text-align: center; }
+  .chrono {
+    font-family: var(--mono);
+    font-size: 2rem;
+    font-weight: 700;
+    letter-spacing: .05em;
+    color: #fff;
+    background: #05070c;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 6px;
+    text-shadow: 0 0 12px rgba(59,130,246,.55);
+    display: flex;
+    align-items: baseline;
+    justify-content: center;
+    gap: 2px;
+  }
+  .chrono .tenths { font-size: 1.1rem; color: var(--s-color); }
+  .chrono-caption {
+    font-size: .62rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    margin-top: 6px;
+  }
+  .chrono-dot {
+    display: inline-block;
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: var(--s-color);
+    margin-right: 6px;
+    box-shadow: 0 0 6px var(--s-color);
+  }
+  .chrono-dot.running { animation: blink 1s steps(1) infinite; }
+  @keyframes blink { 50% { opacity: .15; } }
+
+  /* ── Temporizadores de evento ── */
+  .event-timers { display: flex; flex-direction: column; gap: 10px; }
+  .event-timer {
+    border-radius: 8px;
+    padding: 10px 12px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: #05070c;
+    border: 1px solid var(--border);
+    position: relative;
+    overflow: hidden;
+  }
+  .event-timer.infect { border-color: rgba(239,68,68,.35); }
+  .event-timer.recover { border-color: rgba(34,197,94,.35); }
+
+  .ring-wrap { position: relative; width: 52px; height: 52px; flex-shrink: 0; }
+  .ring-wrap svg { transform: rotate(-90deg); width: 52px; height: 52px; }
+  .ring-track { fill: none; stroke: var(--border); stroke-width: 5; }
+  .ring-fill  { fill: none; stroke-width: 5; stroke-linecap: round; transition: stroke-dashoffset .1s linear; }
+  .event-timer.infect .ring-fill { stroke: var(--i-color); }
+  .event-timer.recover .ring-fill { stroke: var(--r-color); }
+  .ring-num {
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--mono);
+    font-size: .82rem;
+    font-weight: 700;
+  }
+  .event-timer.infect .ring-num { color: var(--i-color); }
+  .event-timer.recover .ring-num { color: var(--r-color); }
+
+  .event-timer-info { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+  .event-timer-label {
+    font-size: .68rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: .05em;
+  }
+  .event-timer-flash {
+    font-family: var(--sans);
+    font-weight: 700;
+    font-size: .82rem;
+    opacity: 0;
+    transform: translateY(4px);
+    transition: opacity .15s, transform .15s;
+  }
+  .event-timer.infect .event-timer-flash { color: var(--i-color); }
+  .event-timer.recover .event-timer-flash { color: var(--r-color); }
+  .event-timer-flash.show { opacity: 1; transform: translateY(0); }
+
+  .param-row { margin-bottom: 14px; }
+  .param-row:last-child { margin-bottom: 0; }
+  .param-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 6px;
+  }
+  .param-name { font-size: .78rem; color: var(--text); }
+  .param-val {
+    font-family: var(--mono);
+    font-size: .78rem;
+    color: var(--s-color);
+    min-width: 36px;
+    text-align: right;
+  }
+  .param-unit { font-size: .63rem; color: var(--muted); margin-left: 2px; }
+  .param-hint { font-size: .6rem; color: var(--muted); margin-top: 3px; }
+
+  input[type=range] {
+    -webkit-appearance: none;
+    width: 100%;
+    height: 4px;
+    border-radius: 2px;
+    background: var(--border);
+    outline: none;
+  }
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 14px; height: 14px;
+    border-radius: 50%;
+    background: var(--s-color);
+    cursor: pointer;
+    box-shadow: 0 0 6px rgba(59,130,246,.6);
+    transition: transform .15s;
+  }
+  input[type=range]::-webkit-slider-thumb:hover { transform: scale(1.2); }
+
+  input[type=number] {
+    background: #0b0f1a;
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: .82rem;
+    padding: 6px 10px;
+    width: 100%;
+    outline: none;
+    transition: border-color .15s;
+  }
+  input[type=number]:focus { border-color: var(--s-color); }
+
+  .legend {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    font-size: .76rem;
+  }
+  .legend-row { display: flex; align-items: center; gap: 8px; }
+  .legend-dot {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  @media (max-width: 900px) {
+    body { overflow-y: auto; height: auto; min-height: 100vh; }
+    main { grid-template-columns: 1fr; grid-template-rows: auto auto auto auto; padding: 12px 14px; }
+    #canvas-wrap { grid-row: auto; grid-column: auto; height: 52vh; min-height: 260px; }
+    #chart-wrap { grid-row: auto; grid-column: auto; height: 170px; }
+    .panel { grid-row: auto; grid-column: auto; overflow: visible; }
+    .stats-bar { grid-template-columns: repeat(2, 1fr); }
+    .ctrl-card { grid-column: span 1; flex-direction: row; min-width: 0; }
+    .ctrl-card button { flex: 1 1 0; }
+  }
+
+  @media (max-width: 600px) {
+    header { padding: 10px 16px; }
+    .header-inner { flex-direction: column; align-items: flex-start; gap: 4px; }
+    .badge { align-self: flex-start; }
+    main { padding: 10px 12px; gap: 10px; }
+    #canvas-wrap { height: 44vh; min-height: 220px; }
+    .stats-bar { grid-template-columns: 1fr 1fr; }
+    .stat-card { padding: 8px 12px; gap: 8px; }
+    .stat-value { font-size: 1.15rem; }
+    .ctrl-card { grid-column: 1 / -1; }
+    .chrono { font-size: 1.6rem; }
+    .chrono .tenths { font-size: .95rem; }
+    .ring-wrap, .ring-wrap svg { width: 44px; height: 44px; }
+    .ring-num { font-size: .72rem; }
+    .event-timer { padding: 8px 10px; gap: 10px; }
+  }
+
+  @media (max-width: 420px) {
+    .stats-bar { grid-template-columns: 1fr; }
+    .ctrl-card { flex-direction: row; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-inner">
+    <div>
+      <h1>Simulador <span>Epidemiológico</span></h1>
+      <div class="subtitle">Docentes: Víctor Díaz · Felipe Carrasco · Renato Ortiz</div>
+    </div>
+    <div class="badge">Modelo SIR</div>
+  </div>
+</header>
+
+<main>
+  <!-- Stats bar -->
+  <div class="stats-bar">
+    <div class="stat-card">
+      <div class="stat-dot s"></div>
+      <div>
+        <div class="stat-label">Susceptibles</div>
+        <div class="stat-value s" id="cnt-s">98</div>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-dot i"></div>
+      <div>
+        <div class="stat-label">Infectados</div>
+        <div class="stat-value i" id="cnt-i">2</div>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-dot r"></div>
+      <div>
+        <div class="stat-label">Recuperados</div>
+        <div class="stat-value r" id="cnt-r">0</div>
+      </div>
+    </div>
+    <div class="ctrl-card">
+      <button class="primary" id="btn-start">▶ Iniciar</button>
+      <button id="btn-pause" disabled>⏸ Pausar</button>
+    </div>
+    <div class="ctrl-card">
+      <button class="danger" id="btn-reset">↺ Reiniciar</button>
+    </div>
+  </div>
+
+  <!-- Canvas: elemento principal -->
+  <div id="canvas-wrap">
+    <canvas id="sim"></canvas>
+  </div>
+
+  <!-- Chart -->
+  <div id="chart-wrap">
+    <div class="chart-title">Evolución temporal de la población</div>
+    <canvas id="chart"></canvas>
+  </div>
+
+  <!-- Right panel -->
+  <div class="panel">
+
+    <div class="panel-box">
+      <h3>Cronómetro</h3>
+      <div class="chrono-wrap">
+        <div class="chrono">
+          <span class="chrono-dot running" id="chrono-dot"></span><span id="timer">00:00</span><span class="tenths" id="timer-tenths">.0</span>
+        </div>
+        <div class="chrono-caption">Tiempo transcurrido</div>
+      </div>
+    </div>
+
+    <div class="panel-box">
+      <h3>Próximo evento</h3>
+      <div class="event-timers">
+        <div class="event-timer infect">
+          <div class="ring-wrap">
+            <svg viewBox="0 0 52 52">
+              <circle class="ring-track" cx="26" cy="26" r="21"></circle>
+              <circle class="ring-fill" id="si-ring" cx="26" cy="26" r="21" stroke-dasharray="131.9" stroke-dashoffset="0"></circle>
+            </svg>
+            <div class="ring-num" id="si-cd">--</div>
+          </div>
+          <div class="event-timer-info">
+            <div class="event-timer-label">Próximo contagio</div>
+            <div class="event-timer-flash" id="si-flash">¡Nuevo Infectado!</div>
+          </div>
+        </div>
+        <div class="event-timer recover">
+          <div class="ring-wrap">
+            <svg viewBox="0 0 52 52">
+              <circle class="ring-track" cx="26" cy="26" r="21"></circle>
+              <circle class="ring-fill" id="ir-ring" cx="26" cy="26" r="21" stroke-dasharray="131.9" stroke-dashoffset="0"></circle>
+            </svg>
+            <div class="ring-num" id="ir-cd">--</div>
+          </div>
+          <div class="event-timer-info">
+            <div class="event-timer-label">Próxima recuperación</div>
+            <div class="event-timer-flash" id="ir-flash">¡Nuevo Recuperado!</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel-box">
+      <h3>Parámetros</h3>
+
+      <div class="param-row">
+        <div class="param-header">
+          <span class="param-name">Población total</span>
+        </div>
+        <input type="number" id="inp-pop" min="10" max="100" value="100">
+      </div>
+
+      <div class="param-row">
+        <div class="param-header">
+          <span class="param-name">Infectados iniciales</span>
+        </div>
+        <input type="number" id="inp-i0" min="1" max="10" value="2">
+      </div>
+
+      <div class="param-row">
+        <div class="param-header">
+          <span class="param-name">S→I cada</span>
+          <span><span class="param-val" id="val-si">10</span><span class="param-unit">s</span></span>
+        </div>
+        <input type="range" id="rng-si" min="2" max="30" value="10" step="1">
+        <div style="display:flex;justify-content:space-between;font-size:.6rem;color:var(--muted);margin-top:2px">
+          <span>2s</span><span>30s</span>
+        </div>
+      </div>
+
+      <div class="param-row">
+        <div class="param-header">
+          <span class="param-name">I→R cada</span>
+          <span><span class="param-val" id="val-ir">4</span><span class="param-unit">s</span></span>
+        </div>
+        <input type="range" id="rng-ir" min="4" max="60" value="4" step="1">
+        <div style="display:flex;justify-content:space-between;font-size:.6rem;color:var(--muted);margin-top:2px">
+          <span>4s</span><span>60s</span>
+        </div>
+        <div class="param-hint">Mínimo 4s: cada 4s como máximo se libera un recuperado.</div>
+      </div>
+
+      <div class="param-row">
+        <div class="param-header">
+          <span class="param-name">Infectados por evento</span>
+          <span><span class="param-val" id="val-rate">2</span></span>
+        </div>
+        <input type="range" id="rng-rate" min="1" max="5" value="2" step="1">
+        <div style="display:flex;justify-content:space-between;font-size:.6rem;color:var(--muted);margin-top:2px">
+          <span>1</span><span>5</span>
+        </div>
+      </div>
+
+      <button id="btn-apply" class="primary" style="width:100%;margin-top:8px;padding:8px;border-radius:6px;font-size:.8rem;">Aplicar cambios</button>
+    </div>
+
+    <div class="panel-box">
+      <h3>Leyenda</h3>
+      <div class="legend">
+        <div class="legend-row"><div class="legend-dot" style="background:var(--s-color);box-shadow:0 0 6px var(--s-color)"></div><span>Susceptible — puede infectarse</span></div>
+        <div class="legend-row"><div class="legend-dot" style="background:var(--i-color);box-shadow:0 0 6px var(--i-color)"></div><span>Infectado (cepa) — contagioso</span></div>
+        <div class="legend-row"><div class="legend-dot" style="background:var(--r-color);box-shadow:0 0 6px var(--r-color)"></div><span>Recuperado — inmune</span></div>
+      </div>
+    </div>
+
+  </div>
+</main>
+
+<script>
+/* ════════════════════════════════════════════
+   SIMULADOR EPIDEMIOLÓGICO — SIR
+   ════════════════════════════════════════════ */
+
+// ── Parámetros iniciales ──
+let TOTAL      = 100;
+let I0         = 2;
+let SI_SECS    = 10;   // s→i cada N segundos
+let IR_SECS    = 4;    // i→r cada N segundos (mínimo 4s)
+let INF_RATE   = 2;    // cuántos se infectan por evento
+
+const RING_CIRCUMFERENCE = 131.9; // 2 * PI * 21
+
+// ── Estado ──
+let running    = false;
+let elapsed    = 0;       // segundos
+let siTimer    = 0;
+let irTimer    = 0;
+let animId     = null;
+let lastTs     = null;
+let prevCounts = {s:-1,i:-1,r:-1};
+
+let agents     = [];
+
+// ── Canvas ──
+const simCanvas = document.getElementById('sim');
+const ctx       = simCanvas.getContext('2d');
+
+function resizeSim() {
+  const wrap = document.getElementById('canvas-wrap');
+  simCanvas.width  = wrap.clientWidth;
+  simCanvas.height = wrap.clientHeight;
+}
+window.addEventListener('resize', () => { resizeSim(); resizeChart(); });
+
+// ── Chart (simple canvas) ──
+const chartCanvas = document.getElementById('chart');
+const cctx        = chartCanvas.getContext('2d');
+const history     = [];  // [{s,i,r,t}]
+
+function resizeChart() {
+  const wrap = document.getElementById('chart-wrap');
+  chartCanvas.width  = wrap.clientWidth - 32;
+  chartCanvas.height = Math.max(80, wrap.clientHeight - 26);
+  drawChart();
+}
+
+// ── Agent class ──
+class Agent {
+  constructor(state) {
+    this.state = state; // 'S','I','R'
+    this.rot   = Math.random() * Math.PI * 2;
+    this.rotSpd = (0.3 + Math.random() * 0.4) * (Math.random() < 0.5 ? -1 : 1);
+    this.reset();
+  }
+  reset() {
+    this.x  = Math.random() * (simCanvas.width  - 20) + 10;
+    this.y  = Math.random() * (simCanvas.height - 20) + 10;
+    const spd = 0.4 + Math.random() * 0.6;
+    const ang = Math.random() * Math.PI * 2;
+    this.vx = Math.cos(ang) * spd;
+    this.vy = Math.sin(ang) * spd;
+    this.r  = 6;
+  }
+  color() {
+    return this.state === 'S' ? '#3b82f6'
+         : this.state === 'I' ? '#ef4444'
+                              : '#22c55e';
+  }
+  glow() {
+    return this.state === 'S' ? 'rgba(59,130,246,.4)'
+         : this.state === 'I' ? 'rgba(239,68,68,.45)'
+                              : 'rgba(34,197,94,.4)';
+  }
+  move() {
+    this.x += this.vx;
+    this.y += this.vy;
+    if (this.x < this.r || this.x > simCanvas.width  - this.r) this.vx *= -1;
+    if (this.y < this.r || this.y > simCanvas.height - this.r) this.vy *= -1;
+    this.x = Math.max(this.r, Math.min(simCanvas.width  - this.r, this.x));
+    this.y = Math.max(this.r, Math.min(simCanvas.height - this.r, this.y));
+    if (this.state === 'I') this.rot += this.rotSpd * 0.02;
+  }
+  draw(ctx) {
+    // glow
+    ctx.beginPath();
+    const g = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, this.r * (this.state==='I' ? 3.2 : 2.5));
+    g.addColorStop(0, this.glow());
+    g.addColorStop(1, 'transparent');
+    ctx.fillStyle = g;
+    ctx.arc(this.x, this.y, this.r * (this.state==='I' ? 3.2 : 2.5), 0, Math.PI * 2);
+    ctx.fill();
+
+    if (this.state === 'I') {
+      this.drawStrain(ctx);
+    } else {
+      ctx.beginPath();
+      ctx.arc(this.x, this.y, this.r, 0, Math.PI * 2);
+      ctx.fillStyle = this.color();
+      ctx.fill();
+    }
+  }
+  // Diseño de "cepa" viral: núcleo + espículas radiales, como una partícula de virus
+  drawStrain(ctx) {
+    const spikes = 8;
+    const coreR  = this.r;
+    const spikeLen = 3.2;
+
+    // espículas
+    ctx.fillStyle = '#f97316';
+    for (let k = 0; k < spikes; k++) {
+      const a = this.rot + (k / spikes) * Math.PI * 2;
+      const bx = this.x + Math.cos(a) * coreR;
+      const by = this.y + Math.sin(a) * coreR;
+      const tx = this.x + Math.cos(a) * (coreR + spikeLen);
+      const ty = this.y + Math.sin(a) * (coreR + spikeLen);
+      const perp = a + Math.PI/2;
+      const w = 1.3;
+      ctx.beginPath();
+      ctx.moveTo(bx + Math.cos(perp)*w, by + Math.sin(perp)*w);
+      ctx.lineTo(bx - Math.cos(perp)*w, by - Math.sin(perp)*w);
+      ctx.lineTo(tx, ty);
+      ctx.closePath();
+      ctx.fill();
+      // punta de la espícula
+      ctx.beginPath();
+      ctx.arc(tx, ty, 1.1, 0, Math.PI*2);
+      ctx.fill();
+    }
+
+    // núcleo con degradado
+    const coreG = ctx.createRadialGradient(
+      this.x - coreR*0.3, this.y - coreR*0.3, 0.5,
+      this.x, this.y, coreR
+    );
+    coreG.addColorStop(0, '#fca5a5');
+    coreG.addColorStop(0.55, '#ef4444');
+    coreG.addColorStop(1, '#991b1b');
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, coreR, 0, Math.PI * 2);
+    ctx.fillStyle = coreG;
+    ctx.fill();
+
+    // textura interna (puntos tipo proteínas)
+    ctx.fillStyle = 'rgba(153,27,27,.55)';
+    [[-2,-1],[1.5,1.8],[-1,2]].forEach(([dx,dy]) => {
+      ctx.beginPath();
+      ctx.arc(this.x+dx, this.y+dy, 1, 0, Math.PI*2);
+      ctx.fill();
+    });
+  }
+}
+
+function initAgents() {
+  agents = [];
+  for (let i = 0; i < I0;    i++) agents.push(new Agent('I'));
+  for (let i = 0; i < TOTAL - I0; i++) agents.push(new Agent('S'));
+}
+
+function counts() {
+  let s=0,i=0,r=0;
+  agents.forEach(a => { if(a.state==='S') s++; else if(a.state==='I') i++; else r++; });
+  return {s,i,r};
+}
+
+function updateCounters() {
+  const {s,i,r} = counts();
+  setStat('cnt-s', s, 's');
+  setStat('cnt-i', i, 'i');
+  setStat('cnt-r', r, 'r');
+}
+
+function setStat(id, value, key) {
+  const el = document.getElementById(id);
+  const strVal = String(value);
+  if (el.textContent !== strVal) {
+    el.textContent = strVal;
+    if (prevCounts[key] !== -1) {
+      el.classList.remove('pulse');
+      // forzar reflow para reiniciar la animación
+      void el.offsetWidth;
+      el.classList.add('pulse');
+    }
+    prevCounts[key] = value;
+  }
+}
+
+function formatTime(sec) {
+  const m = String(Math.floor(sec/60)).padStart(2,'0');
+  const s = String(Math.floor(sec % 60)).padStart(2,'0');
+  return `${m}:${s}`;
+}
+
+function setRing(ringId, numId, remaining, total) {
+  const pct = Math.max(0, Math.min(1, remaining / total));
+  const ring = document.getElementById(ringId);
+  ring.setAttribute('stroke-dashoffset', (RING_CIRCUMFERENCE * (1 - pct)).toFixed(2));
+  document.getElementById(numId).textContent = remaining <= 0 ? '0.0' : remaining.toFixed(1);
+}
+
+function flash(id) {
+  const el = document.getElementById(id);
+  el.classList.add('show');
+  clearTimeout(el._t);
+  el._t = setTimeout(() => el.classList.remove('show'), 900);
+}
+
+function updateProgress() {
+  const siRemaining = Math.max(0, SI_SECS - siTimer);
+  const irRemaining = Math.max(0, IR_SECS - irTimer);
+  setRing('si-ring', 'si-cd', siRemaining, SI_SECS);
+  setRing('ir-ring', 'ir-cd', irRemaining, IR_SECS);
+}
+
+// ── Chart drawing ──
+function drawChart() {
+  const W = chartCanvas.width, H = chartCanvas.height;
+  if (!W || !H) return;
+  cctx.clearRect(0,0,W,H);
+
+  if (history.length < 2) return;
+
+  const maxT = history[history.length-1].t || 1;
+  const maxN = TOTAL;
+  const pad  = { l:30, r:10, t:6, b:20 };
+  const cW   = W - pad.l - pad.r;
+  const cH   = H - pad.t - pad.b;
+
+  function tx(t)   { return pad.l + (t / Math.max(maxT,1)) * cW; }
+  function ty(val) { return pad.t + cH - (val / maxN) * cH; }
+
+  // grid lines
+  cctx.strokeStyle = '#1f2d40';
+  cctx.lineWidth = 1;
+  [0, 25, 50, 75, 100].forEach(v => {
+    if (v > maxN) return;
+    const y = ty(v);
+    cctx.beginPath(); cctx.moveTo(pad.l, y); cctx.lineTo(W - pad.r, y); cctx.stroke();
+    cctx.fillStyle = '#374151';
+    cctx.font = '9px Share Tech Mono, monospace';
+    cctx.fillText(v, 2, y + 3);
+  });
+
+  // lines
+  const series = [
+    { key:'s', color:'#3b82f6' },
+    { key:'i', color:'#ef4444' },
+    { key:'r', color:'#22c55e' },
+  ];
+
+  series.forEach(({key, color}) => {
+    cctx.beginPath();
+    cctx.strokeStyle = color;
+    cctx.lineWidth = 1.5;
+    cctx.lineJoin = 'round';
+    history.forEach((pt, idx) => {
+      const x = tx(pt.t), y = ty(pt[key]);
+      idx === 0 ? cctx.moveTo(x,y) : cctx.lineTo(x,y);
+    });
+    cctx.stroke();
+  });
+
+  // time axis
+  cctx.fillStyle = '#374151';
+  cctx.font = '9px Share Tech Mono, monospace';
+  cctx.fillText('0s', pad.l, H-4);
+  cctx.fillText(Math.round(maxT)+'s', W-pad.r-20, H-4);
+}
+
+// ── Simulation events ──
+function doSIEvent() {
+  const susceptibles = agents.filter(a => a.state === 'S');
+  const toInfect = Math.min(INF_RATE, susceptibles.length);
+  if (toInfect > 0) {
+    for (let k = 0; k < toInfect; k++) {
+      const idx = Math.floor(Math.random() * susceptibles.length);
+      susceptibles[idx].state = 'I';
+      susceptibles.splice(idx, 1);
+    }
+    flash('si-flash');
+  }
+}
+
+function doIREvent() {
+  const infected = agents.filter(a => a.state === 'I');
+  if (infected.length > 0) {
+    const idx = Math.floor(Math.random() * infected.length);
+    infected[idx].state = 'R';
+    flash('ir-flash');
+  }
+}
+
+// ── Main loop ──
+function loop(ts) {
+  if (!running) return;
+
+  const dt = lastTs ? Math.min((ts - lastTs) / 1000, 0.1) : 0;
+  lastTs = ts;
+
+  elapsed  += dt;
+  siTimer  += dt;
+  irTimer  += dt;
+
+  if (siTimer >= SI_SECS) { doSIEvent(); siTimer = 0; }
+  if (irTimer >= IR_SECS) { doIREvent(); irTimer = 0; }
+
+  // move agents
+  agents.forEach(a => a.move());
+
+  // draw
+  ctx.clearRect(0, 0, simCanvas.width, simCanvas.height);
+
+  // subtle grid
+  ctx.strokeStyle = 'rgba(255,255,255,.03)';
+  ctx.lineWidth = 1;
+  for (let x = 0; x < simCanvas.width; x += 40) {
+    ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x, simCanvas.height); ctx.stroke();
+  }
+  for (let y = 0; y < simCanvas.height; y += 40) {
+    ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(simCanvas.width, y); ctx.stroke();
+  }
+
+  agents.forEach(a => a.draw(ctx));
+
+  // update UI
+  const elSec = Math.floor(elapsed);
+  const tenths = Math.floor((elapsed - elSec) * 10);
+  document.getElementById('timer').textContent = formatTime(elSec);
+  document.getElementById('timer-tenths').textContent = '.' + tenths;
+  updateProgress();
+  updateCounters();
+
+  // history every second
+  if (history.length === 0 || elapsed - history[history.length-1].t >= 1) {
+    const {s,i,r} = counts();
+    history.push({t: Math.round(elapsed), s, i, r});
+    drawChart();
+  }
+
+  // check end
+  const {i} = counts();
+  if (i === 0) {
+    running = false;
+    document.getElementById('btn-start').disabled = false;
+    document.getElementById('btn-pause').disabled = true;
+    document.getElementById('chrono-dot').classList.remove('running');
+    drawChart();
+    return;
+  }
+
+  animId = requestAnimationFrame(loop);
+}
+
+// ── Controls ──
+document.getElementById('btn-start').addEventListener('click', () => {
+  if (!running) {
+    running = true;
+    lastTs  = null;
+    document.getElementById('btn-start').disabled = true;
+    document.getElementById('btn-pause').disabled = false;
+    document.getElementById('chrono-dot').classList.add('running');
+    animId = requestAnimationFrame(loop);
+  }
+});
+
+document.getElementById('btn-pause').addEventListener('click', () => {
+  running = !running;
+  document.getElementById('btn-pause').textContent = running ? '⏸ Pausar' : '▶ Continuar';
+  document.getElementById('chrono-dot').classList.toggle('running', running);
+  if (running) { lastTs = null; animId = requestAnimationFrame(loop); }
+});
+
+document.getElementById('btn-reset').addEventListener('click', reset);
+
+document.getElementById('btn-apply').addEventListener('click', () => {
+  running = false;
+  if (animId) cancelAnimationFrame(animId);
+
+  TOTAL    = Math.min(100, Math.max(10, parseInt(document.getElementById('inp-pop').value) || 100));
+  I0       = Math.min(10,  Math.max(1,  parseInt(document.getElementById('inp-i0').value)  || 2));
+  SI_SECS  = parseInt(document.getElementById('rng-si').value);
+  IR_SECS  = Math.max(4, parseInt(document.getElementById('rng-ir').value)); // mínimo 4s
+  INF_RATE = parseInt(document.getElementById('rng-rate').value);
+
+  reset();
+});
+
+// Range inputs live update
+document.getElementById('rng-si').addEventListener('input', function() {
+  document.getElementById('val-si').textContent = this.value;
+});
+document.getElementById('rng-ir').addEventListener('input', function() {
+  const v = Math.max(4, parseInt(this.value));
+  this.value = v;
+  document.getElementById('val-ir').textContent = v;
+});
+document.getElementById('rng-rate').addEventListener('input', function() {
+  document.getElementById('val-rate').textContent = this.value;
+});
+
+function reset() {
+  running = false;
+  if (animId) cancelAnimationFrame(animId);
+  elapsed = 0; siTimer = 0; irTimer = 0;
+  history.length = 0;
+  lastTs  = null;
+  prevCounts = {s:-1,i:-1,r:-1};
+
+  resizeSim();
+  resizeChart();
+  initAgents();
+
+  ctx.clearRect(0, 0, simCanvas.width, simCanvas.height);
+  agents.forEach(a => a.draw(ctx));
+  updateCounters();
+
+  document.getElementById('timer').textContent = '00:00';
+  document.getElementById('timer-tenths').textContent = '.0';
+  document.getElementById('chrono-dot').classList.remove('running');
+  setRing('si-ring', 'si-cd', SI_SECS, SI_SECS);
+  setRing('ir-ring', 'ir-cd', IR_SECS, IR_SECS);
+  document.getElementById('btn-start').disabled = false;
+  document.getElementById('btn-pause').disabled = true;
+  document.getElementById('btn-pause').textContent = '⏸ Pausar';
+
+  cctx.clearRect(0,0,chartCanvas.width, chartCanvas.height);
+}
+
+// ── Init ──
+window.addEventListener('load', () => {
+  resizeSim();
+  resizeChart();
+  reset();
+});
+</script>
+</body>
+</html>

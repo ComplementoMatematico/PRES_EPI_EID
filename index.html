@@ -1,0 +1,1477 @@
+<!DOCTYPE html>
+<html lang="es"><head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Espacio de Interacción Didáctica</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700&amp;family=Dancing+Script:wght@700&amp;display=swap" rel="stylesheet">
+<style>
+:root{
+  --uow:#001641;
+  --uow-soft:#13306b;
+  --uow-pale:#5b7099;
+  --grey:#e4e4e4;
+  --grey-dark:#9aa0a8;
+  --ink:#1c1f24;
+  --paper:#ffffff;
+  --scale:1;             /* master zoom: controls ALL slide text + image sizes at once */
+  --img-h:340px;          /* base height for full-width figures, scales with --scale */
+  --subimg-h:240px;       /* base height for side-by-side sub-figures, scales with --scale */
+}
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;height:100%;background:#1b1f27;font-family:'Source Serif 4',Georgia,'Times New Roman',serif;}
+.viewport{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;overflow:hidden;background:radial-gradient(circle at 50% 30%,#262c38,#14171d 75%);}
+.stage{position:relative;width:1280px;height:720px;background:#fff;box-shadow:0 25px 70px rgba(0,0,0,.5);border-radius:6px;overflow:hidden;transform-origin:center center;flex:0 0 auto;}
+
+.slide{position:absolute;top:0;left:0;right:0;bottom:40px;display:flex;flex-direction:column;opacity:0;visibility:hidden;transition:opacity .3s ease;}
+.slide.active{opacity:1;visibility:visible;z-index:2;}
+
+.topbar{
+  flex:0 0 26px;height:26px;background:var(--grey);border-bottom:2px solid var(--uow);
+  display:grid;
+  grid-template-columns:1fr auto 1fr;
+  align-items:center;
+  gap:14px;
+  padding:0 26px;
+  font-size:calc(11px*var(--scale));letter-spacing:.05em;text-transform:uppercase;color:var(--uow-soft);font-weight:600;
+}
+.topbar .mark{width:9px;height:9px;border-radius:50%;background:var(--uow);display:inline-block;margin-right:9px;flex:0 0 auto;}
+.topbar-left{display:flex;align-items:center;justify-self:start;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.topbar-center{display:flex;align-items:center;justify-self:center;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.topbar-right{display:flex;align-items:center;justify-self:end;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+
+.frametitle{flex:0 0 auto;background:var(--uow);color:#fff;padding:15px 56px;font-size:calc(25px*var(--scale));font-weight:700;line-height:1.25;box-shadow:0 3px 6px rgba(0,0,0,.22);}
+
+.content{flex:1 1 auto;overflow-y:auto;padding:26px 60px 14px;font-size:calc(17px*var(--scale));line-height:1.5;color:var(--ink);}
+.content.center{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;}
+.content.dense{font-size:calc(15px*var(--scale));line-height:1.42;padding-top:18px;}
+.content p{margin:10px 0;}
+.content > p:first-child{margin-top:0;}
+
+.content ul{list-style:none;margin:8px 0;padding-left:0;}
+.content ul:not(.toc-list) li{position:relative;padding-left:26px;margin:8px 0;}
+.content ul:not(.toc-list) li::before{content:"";position:absolute;left:0;top:9px;width:9px;height:9px;border-radius:50%;background:var(--uow);}
+.content ul ul{margin:6px 0 6px 2px;}
+.content ul ul li{margin:6px 0;}
+.content ul ul li::before{width:7px;height:7px;background:transparent;border:2px solid var(--uow);top:7px;}
+.content li.check{padding-left:30px;}
+.content li.check::before{content:"\2713";background:none;width:auto;height:auto;border:none;color:var(--uow);font-weight:700;font-size:calc(15px*var(--scale));top:0px;left:0;}
+.dense li{margin:6px 0;}
+
+.tcb{border:2px solid var(--uow);border-radius:8px;margin:16px 0;background:#fff;overflow:hidden;box-shadow:0 2px 10px rgba(0,22,65,.10);}
+.tcb-title{background:var(--uow);color:#fff;padding:8px 18px;font-weight:700;font-size:calc(15px*var(--scale));}
+.tcb-body{padding:14px 22px 18px;}
+.dense .tcb-body{padding:12px 20px 16px;}
+
+.eqtable{display:grid;grid-template-columns:max-content 1fr max-content;gap:9px 24px;align-items:center;margin:4px 0 10px;}
+.eqtable .lbl{font-weight:700;color:var(--uow);font-size:calc(15px*var(--scale));}
+.eqtable .dom{color:#555;font-size:calc(14.5px*var(--scale));white-space:nowrap;font-style:italic;}
+
+table.data{border-collapse:collapse;width:100%;margin:12px 0;font-size:calc(14.5px*var(--scale));}
+table.data th,table.data td{border:1px solid var(--uow);padding:5px 9px;text-align:center;}
+table.data thead th{background:var(--uow);color:#fff;font-weight:700;}
+.tabcap,.figcap{font-size:calc(13.5px*var(--scale));color:#444;text-align:center;margin:6px 0 14px;font-style:italic;}
+
+figure.fig{margin:10px 0;text-align:center;}
+figure.fig img{max-width:100%;max-height:calc(var(--img-h)*var(--scale));object-fit:contain;display:block;margin:0 auto;}
+.subfigs{display:flex;gap:30px;justify-content:center;margin-top:4px;}
+.subfig{flex:1;text-align:center;}
+.subfig img{max-width:100%;max-height:calc(var(--subimg-h)*var(--scale));object-fit:contain;display:block;margin:0 auto;}
+.subfig figcaption{font-size:calc(13px*var(--scale));margin-top:6px;color:#444;}
+
+.toc-list{list-style:none;padding:0;margin:14px 0;}
+.toc-list li{display:flex;align-items:center;gap:16px;padding:13px 6px;font-size:calc(19px*var(--scale));border-bottom:1px solid #eee;color:var(--ink);transition:color .2s;}
+.toc-list li:last-child{border-bottom:none;}
+.toc-list .dot{width:13px;height:13px;border-radius:50%;background:var(--uow);flex:0 0 auto;}
+.toc-list li.shaded{color:#aab0b8;}
+.toc-list li.shaded .dot{background:#d7d9dd;}
+.toc-list li.current{color:var(--uow);font-weight:700;font-size:calc(21px*var(--scale));}
+
+.title-slide .content{justify-content:center;padding-top:0;}
+.title-box{background:var(--uow);color:#fff;padding:24px 54px;border-radius:6px;max-width:1000px;}
+.title-box h1{margin:0;font-size:calc(26px*var(--scale));font-weight:700;line-height:1.32;}
+.title-box .subtitle{margin-top:12px;font-size:calc(15px*var(--scale));font-weight:400;opacity:.92;line-height:1.4;}
+.t-author{margin-top:22px;font-size:calc(18px*var(--scale));font-weight:700;color:var(--ink);}
+.t-institute{margin-top:6px;font-size:calc(13.5px*var(--scale));color:#444;line-height:1.4;}
+.t-date{margin-top:10px;font-size:calc(12.5px*var(--scale));color:#666;}
+.t-logos{display:flex;align-items:center;justify-content:center;gap:clamp(14px,3vw,40px);margin-top:20px;width:100%;max-width:1080px;flex-wrap:nowrap;}
+.t-logos img{flex:1 1 0;min-width:0;width:auto;height:auto;max-width:170px;max-height:calc(70px*var(--scale));object-fit:contain;}
+
+.final-slide .content{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;text-align:center;}
+.final-slide .calligra{font-family:'Dancing Script',cursive;font-size:calc(44px*var(--scale));color:var(--uow);font-weight:700;}
+
+.bib-list{list-style:none;padding:0;margin:6px 0;}
+.bib-list li{padding-left:34px;position:relative;margin:13px 0;font-size:calc(14.5px*var(--scale));line-height:1.45;}
+.bib-list li .num{position:absolute;left:0;top:0;color:var(--uow);font-weight:700;}
+.bib-list .eyebrow{display:block;color:var(--uow-pale);font-size:calc(12px*var(--scale));text-transform:uppercase;letter-spacing:.08em;margin-bottom:14px;font-weight:600;}
+
+/* ── Sistema gen&eacute;rico de fragmentos: marca cualquier elemento con
+   class="fragment" para que se revele uno por click del control/teclado, o
+   class="fragment-auto" (+ opcional data-delay="600" en ms) para que se
+   revele solo, con tiempo, apenas entras a la diapositiva. Mismo look en
+   ambos casos, solo cambia qui&eacute;n dispara el cambio de clase .visible. ── */
+.fragment, .fragment-auto{opacity:0;transform:translateY(18px);transition:opacity .42s ease,transform .42s ease;}
+.fragment.visible, .fragment-auto.visible{opacity:1;transform:translateY(0);}
+.farr.fragment, .farr.fragment-auto{transform:none;}
+
+.footbar{flex:0 0 30px;height:40px;display:flex;font-size:calc(13px*var(--scale));font-weight:600;}
+.footbar.global{position:absolute;left:0;right:0;bottom:0;z-index:5;}
+.footbar > div{display:flex;align-items:center;overflow:hidden;}
+.fb-author{flex:0 0 35%;background:var(--uow);color:#fff;justify-content:center;padding:0 10px;white-space:nowrap;}
+.fb-title{flex:0 0 35%;background:var(--grey);color:var(--uow);justify-content:center;padding:0 10px;text-align:center;white-space:nowrap;text-overflow:ellipsis;font-weight:600;font-size:calc(15px*var(--scale));}
+.fb-date{flex:1 1 30%;background:var(--uow);color:#fff;justify-content:flex-end;padding:0 16px;gap:14px;white-space:nowrap;}
+
+.fb-controls{display:flex;align-items:center;gap:6px;flex:0 0 auto;height:100%;}
+.fb-controls button{
+  width:24px;height:24px;flex:0 0 auto;border-radius:50%;border:none;
+  background:rgba(255,255,255,.16);color:#fff;font-size:12px;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  transition:background .2s;
+}
+.fb-controls button:hover{background:rgba(255,255,255,.34);}
+.fb-controls button:disabled{opacity:.35;cursor:default;}
+
+.progress{position:fixed;top:0;left:0;height:4px;background:var(--uow);z-index:60;width:0;transition:width .25s ease;}
+.hint{position:fixed;left:50%;top:18px;transform:translateX(-50%);background:rgba(0,22,65,.88);color:#fff;font-size:13px;padding:9px 18px;border-radius:20px;z-index:50;opacity:0;transition:opacity .5s;pointer-events:none;font-family:'Source Serif 4',serif;}
+.hint.show{opacity:1;}
+
+
+/* ════════════════════════════════
+   S6 — FLUJO
+════════════════════════════════ */
+.s6-wrap { position:relative; z-index:2; width:min(1000px,94%); }
+.flow-row {
+  display:flex; align-items:stretch; justify-content:center;
+  margin-top:clamp(.8rem,2vh,1.4rem); gap:0;
+}
+.fnode {
+  background:var(--card); border:1.5px solid var(--border);
+  border-radius:clamp(.6rem,1.4vw,1.2rem);
+  padding:clamp(.7rem,1.8vw,1.3rem) clamp(.5rem,1.2vw,1rem);
+  text-align:center; width:clamp(110px,21%,200px); flex-shrink:0;
+  box-shadow:var(--sh);
+}
+.fn-ico { font-size:var(--t-icon); display:block; margin-bottom:.4rem; }
+.fn-ttl {
+  font-family:'JetBrains Mono',monospace;
+  font-size:var(--t-label); font-weight:700; color:var(--ink); margin-bottom:.25rem;
+}
+.fn-dsc { font-size:var(--t-label); color:var(--muted); line-height:1.45; }
+
+.farr {
+  display:flex; flex-direction:column;
+  align-items:center; justify-content:center;
+  padding:0 clamp(.1rem,.5vw,.4rem); flex-shrink:0;
+}
+.arr-line {
+  width:clamp(16px,2.5vw,38px); height:2px;
+  background:linear-gradient(90deg,var(--accent),var(--acc3)); position:relative;
+}
+.arr-line::after {
+  content:'▶'; position:absolute; right:-9px; top:-7px;
+  font-size:.68rem; color:var(--acc3);
+}
+.arr-lbl { font-size:var(--t-label); font-family:'JetBrains Mono',monospace; color:var(--muted); margin-top:.28rem; white-space:nowrap; }
+
+.code-mini {
+  background:#1e1e2e; border-radius:.45rem;
+  padding:.35rem .5rem; margin-top:.45rem;
+  font-family:'JetBrains Mono',monospace;
+  font-size:var(--t-code); line-height:1.7; color:#cdd6f4; text-align:left;
+}
+.cm{color:#89b4fa;} .ca{color:#a6e3a1;}
+.qr-mini { width:clamp(46px,7vw,68px); height:clamp(46px,7vw,68px); margin:.45rem auto 0; display:block; }
+.pl-list { margin:.4rem 0 0; }
+.pl { height:5px; border-radius:3px; background:rgba(0,59,126,.2); margin:3px 0; }
+.pl:nth-child(2){width:62%;background:rgba(0,38,79,.2);}
+.pl:nth-child(3){background:rgba(31,95,168,.2);}
+.pl:nth-child(4){width:76%;background:rgba(47,72,88,.2);}
+
+.flow-note {
+  margin-top:var(--gap); background:rgba(255,255,255,.75);
+  border:1px solid var(--border);
+  border-radius:clamp(.5rem,1.2vw,.9rem);
+  padding:.6rem clamp(.8rem,2vw,1.3rem);
+  font-size:var(--t-body); color:var(--ink2); line-height:1.65;
+}
+.flow-note strong { color:var(--accent); }
+
+/* ════════════════════════════════
+   QA SLIDE — pregunta → respuesta → siguiente pregunta
+════════════════════════════════ */
+.qa-col {
+  flex: 1 1 55%;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+/* Cada panel ocupa exactamente el mismo espacio y se superpone */
+.qa-panel {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: calc(14px*var(--scale));
+  opacity: 0;
+  transition: opacity .4s ease;
+  pointer-events: none;
+}
+/* El panel 0 arranca visible */
+.qa-panel[data-qa="0"] { opacity: 1; pointer-events: auto; }
+
+/* Anular el translateY del sistema .fragment para estos paneles */
+.qa-panel.fragment,
+.qa-panel.fragment.visible {
+  transform: none !important;
+}
+/* La visibilidad la maneja syncQAPanels, no la clase .visible */
+.qa-panel.fragment.visible { opacity: 0; } /* sobreescrito por syncQAPanels */
+
+.qa-question {
+  font-size: calc(19px*var(--scale));
+  font-weight: 700;
+  color: var(--uow);
+  line-height: 1.3;
+  border-left: 4px solid var(--uow);
+  padding-left: calc(14px*var(--scale));
+}
+.qa-question strong { color: var(--uow-soft); }
+
+.qa-answer {
+  font-size: calc(16px*var(--scale));
+  color: var(--ink);
+  line-height: 1.55;
+  background: #ffffff;
+  border-radius: 6px;
+  padding: calc(12px*var(--scale)) calc(16px*var(--scale));
+  border-left: 4px solid var(--uow-pale);
+}
+.beamer-video-slide {
+  position: relative;
+  overflow: hidden;
+}
+
+/* Video ocupa todo el área bajo el topbar */
+.bv-bg {
+  position: absolute;
+  top: 26px; /* altura del topbar */
+  left: 0; right: 0; bottom: 40px; /* bottom = footbar height */
+  z-index: 0;
+}
+.bv-video {
+  width: 100%; height: 100%;
+  object-fit: cover;
+  display: block;
+}
+/* Velo oscuro semitransparente para legibilidad del texto */
+.bv-scrim {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    135deg,
+    rgba(0,22,65,0.78) 0%,
+    rgba(0,22,65,0.45) 60%,
+    rgba(0,0,0,0.25) 100%
+  );
+}
+
+/* Título flotante que reemplaza al frametitle (el frametitle original se oculta) */
+.beamer-video-slide .frametitle { display: none; }
+.bv-frametitle {
+  position: absolute;
+  top: 26px; left: 0; right: 0;
+  background: rgba(0,22,65,0.82);
+  color: #fff;
+  padding: calc(10px*var(--scale)) calc(56px*var(--scale));
+  font-size: calc(22px*var(--scale));
+  font-weight: 700;
+  line-height: 1.25;
+  z-index: 3;
+  letter-spacing: 0.01em;
+  border-bottom: 2px solid rgba(255,255,255,0.15);
+  backdrop-filter: blur(4px);
+}
+
+/* Área de preguntas overlay */
+.bv-overlay {
+  position: absolute;
+  top: calc(26px + calc(44px*var(--scale)));  /* topbar + bv-frametitle aprox */
+  left: 0; right: 0; bottom: 40px;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  padding: calc(20px*var(--scale)) calc(60px*var(--scale));
+  gap: calc(18px*var(--scale));
+}
+
+/* Cada bloque-pregunta */
+.bv-question {
+  display: flex;
+  flex-direction: column;
+  gap: calc(6px*var(--scale));
+  background: rgba(255,255,255,0.10);
+  border-left: 4px solid #fff;
+  border-radius: 0 8px 8px 0;
+  padding: calc(12px*var(--scale)) calc(20px*var(--scale));
+  backdrop-filter: blur(6px);
+  max-width: 70%;
+}
+.bv-badge {
+  font-size: calc(10px*var(--scale));
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: rgba(255,255,255,0.65);
+}
+.bv-text {
+  font-size: calc(20px*var(--scale));
+  color: #fff;
+  font-weight: 600;
+  line-height: 1.3;
+}
+.bv-text strong { color: #ffd966; }
+
+/* La primera pregunta tiene el borde en color acento */
+.bv-q0 { border-left-color: #ffd966; }
+.bv-q1 { border-left-color: #a8d8ea; }
+.bv-q2 { border-left-color: #b5ead7; }
+
+/* Nota de contexto al final */
+.bv-note {
+  margin-top: calc(8px*var(--scale));
+  font-size: calc(13px*var(--scale));
+  color: rgba(255,255,255,0.80);
+  background: rgba(0,22,65,0.55);
+  border-radius: 6px;
+  padding: calc(8px*var(--scale)) calc(16px*var(--scale));
+  backdrop-filter: blur(4px);
+  max-width: 65%;
+  font-style: italic;
+  line-height: 1.4;
+}
+.bv-note strong { color: #ffd966; font-style: normal; }
+
+/* Los fragments dentro del overlay usan la misma animación base,
+   pero con translateY más sutil para verse bien sobre el video */
+.beamer-video-slide .fragment {
+  transform: translateY(12px);
+}
+
+/* ══════════════════════════════════════════════
+   TEMPORIZADOR GLOBAL (flota sobre el encabezado, cualquier slide)
+══════════════════════════════════════════════ */
+#timerBtn { font-size: 13px; }
+
+.dig-timer {
+  position: absolute;
+  top: 40px;
+  right: 30px;
+  left: auto;
+  z-index: 50;
+  display: none;
+  align-items: center;
+  gap: 14px;
+  background: rgba(6,14,32,.92);
+  border: 1px solid rgba(255,255,255,.22);
+  border-radius: 16px;
+  padding: 8px 14px 8px 10px;
+  box-shadow: 0 8px 26px rgba(0,0,0,.45);
+  transform-origin: center center;
+  transition: top .5s cubic-bezier(.4,0,.2,1),
+              left .5s cubic-bezier(.4,0,.2,1),
+              right .5s cubic-bezier(.4,0,.2,1),
+              transform .5s cubic-bezier(.34,1.3,.4,1),
+              box-shadow .5s ease,
+              background .5s ease;
+}
+.dig-timer.visible { display: flex; animation: dtIn .26s cubic-bezier(.2,.9,.3,1.3); }
+@keyframes dtIn { from{opacity:0; transform:translateY(-6px) scale(.92);} to{opacity:1;transform:none;} }
+
+/* ── Al iniciar (running): se centra en la diapositiva y crece al triple ── */
+.dig-timer.running {
+  top: 50%;
+  left: 50%;
+  right: auto;
+  transform: translate(-50%,-50%) scale(3);
+  box-shadow: 0 20px 60px rgba(0,0,0,.6);
+  background: rgba(6,14,32,.96);
+  animation: none;             /* evita conflicto con dtIn al centrarse */
+}
+
+/* aro + dígitos, tamaño fijo (no escala con la slide) */
+.dt-ring-wrap {
+  position: relative;
+  width: calc(58px*var(--scale));
+  height: calc(58px*var(--scale));
+  flex: 0 0 auto;
+}
+.dt-ring { position:absolute; inset:0; width:100%; height:100%; }
+.dt-ring circle { fill:none; stroke-width:7; }
+.dt-ring-bg { stroke: rgba(255,255,255,.18); }
+.dt-ring-fg {
+  stroke: #ff9f0a;
+  stroke-linecap: round;
+  stroke-dasharray: 339.29;      /* 2π·54 */
+  stroke-dashoffset: 0;
+  transform: rotate(-90deg);
+  transform-origin: 60px 60px;
+  transition: stroke-dashoffset .95s linear, stroke .3s;
+}
+.dt-clock {
+  position:absolute; inset:0;
+  display:flex; align-items:center; justify-content:center; gap:0;
+}
+.dt-field {
+  width: calc(19px*var(--scale));
+  background: transparent; border: none; outline: none;
+  text-align: center;
+  font-family: ui-monospace,'SF Mono','Courier New',monospace;
+  font-size: calc(15px*var(--scale)); font-weight: 700;
+  color: #fff; caret-color: #ff9f0a;
+  padding: 0; border-radius: 4px;
+  transition: background .18s;
+  line-height: 1;
+}
+.dt-field:focus { background: rgba(255,159,10,.22); }
+.dt-field::selection { background: rgba(255,159,10,.4); }
+.dt-field::-webkit-outer-spin-button,
+.dt-field::-webkit-inner-spin-button { -webkit-appearance:none; margin:0; }
+.dt-colon {
+  font-family: ui-monospace,'SF Mono','Courier New',monospace;
+  font-size: calc(14px*var(--scale)); font-weight: 700; color:#fff;
+  transform: translateY(-1px);
+}
+.dig-timer.running .dt-colon { animation: dtColon 1s steps(1) infinite; }
+@keyframes dtColon { 0%,100%{opacity:1;} 50%{opacity:.3;} }
+
+/* estados */
+.dig-timer.warning .dt-field { color:#ffe14d; }
+.dig-timer.warning .dt-ring-fg { stroke:#ffd60a; }
+.dig-timer.danger  .dt-field { color:#ff6b6b; }
+.dig-timer.danger  .dt-ring-fg { stroke:#ff453a; }
+.dig-timer.done .dt-field, .dig-timer.done .dt-colon { color:#ff6b6b; }
+
+/* al terminar el tiempo: se mantiene centrado y grande, y pulsa en rojo */
+.dig-timer.done {
+  top: 50%;
+  left: 50%;
+  right: auto;
+  transform: translate(-50%,-50%) scale(3);
+  animation: dtDonePulse 0.7s ease-in-out infinite;
+}
+@keyframes dtDonePulse {
+  0%,100%{ box-shadow: 0 20px 60px rgba(0,0,0,.6), 0 0 0 0 rgba(255,69,58,.55); }
+  50%    { box-shadow: 0 20px 60px rgba(0,0,0,.6), 0 0 0 24px rgba(255,69,58,0); }
+}
+
+/* botones redondos pequeños */
+.dt-btns { display:flex; gap:8px; align-items:center; flex:0 0 auto; }
+.dt-btn {
+  width: calc(30px*var(--scale)); height: calc(30px*var(--scale));
+  border-radius: 50%; border: none; cursor: pointer;
+  font-size: calc(13px*var(--scale)); font-weight: 700;
+  display:flex; align-items:center; justify-content:center;
+  transition: filter .18s, transform .1s, background .18s;
+  padding: 0;
+}
+.dt-btn:active { transform: scale(.9); }
+.dt-reset { background: rgba(255,255,255,.16); color:#fff; }
+.dt-reset:hover { background: rgba(255,255,255,.3); }
+.dt-play {
+  background: rgba(48,209,88,.28); color:#5cf08a;
+  border: 1px solid rgba(48,209,88,.55);
+}
+.dt-play:hover { filter: brightness(1.15); }
+.dig-timer.running .dt-play {
+  background: rgba(255,159,10,.28); color:#ffc861;
+  border-color: rgba(255,159,10,.55);
+}
+
+/* ── Panel de animación de agentes SIR (slide de preguntas) ── */
+.sir-mini-panel{width:88%;background:#07253f;border:1px solid #1C4A6E;border-radius:14px;padding:calc(12px*var(--scale)) calc(12px*var(--scale)) calc(10px*var(--scale));box-shadow:0 8px 24px rgba(0,0,0,.28);}
+.sir-mini-head{color:#fff;font-weight:700;font-size:calc(14px*var(--scale));margin-bottom:calc(8px*var(--scale));}
+.sir-mini-bar{display:flex;height:calc(8px*var(--scale));border-radius:100px;overflow:hidden;background:#0B2F4B;margin-bottom:calc(7px*var(--scale));}
+.sir-mini-bar span{display:block;height:100%;transition:width .3s ease;}
+#qaBarS{background:#2D9CDB;} #qaBarI{background:#E8503A;} #qaBarR{background:#3FBF6A;}
+.sir-mini-legend{display:flex;gap:calc(14px*var(--scale));font-size:calc(11.5px*var(--scale));color:#C7E3F2;margin-bottom:calc(9px*var(--scale));}
+.sir-mini-legend b{color:#fff;margin-left:3px;}
+.sdot{display:inline-block;width:calc(9px*var(--scale));height:calc(9px*var(--scale));border-radius:50%;margin-right:3px;}
+.sS{background:#2D9CDB;} .sI{background:#E8503A;} .sR{background:#3FBF6A;}
+.sir-mini-stage{position:relative;background:#061d33;border:1px solid #143F61;border-radius:10px;overflow:hidden;aspect-ratio:1 / .82;}
+.sir-agents{width:100%;height:100%;display:block;}
+.sir-mini-time{position:absolute;right:8px;bottom:6px;font-family:'Source Serif 4',serif;font-size:calc(11px*var(--scale));color:#9FC7E0;}
+.sir-mini-time b{color:#fff;}
+</style>
+</head>
+<body>
+<div class="progress" id="progress"></div>
+<div class="hint" id="hint">Usa ← → para navegar · +/− agranda <em>esta</em> diapositiva · Ctrl+S guarda los tamaños en el archivo</div>
+<div class="viewport" id="viewport">
+  <div class="stage" id="stage">
+
+
+    <!-- Slide 01 -->
+<section class="slide title-slide" data-section="-1" style="--scale: 1.9;">
+  <div class="topbar"><span class="topbar-left">Epidemiología</span> <span class="topbar-center">Espacio de Interacción Didáctica</span> <span class="topbar-right">Universidad del Bío-Bío</span></div><div class="content center">
+    <div class="title-box">
+      <h1>La Matemática en la Epidemiología</h1>
+      <div class="subtitle"><strong> Modelando el avance de una epidemia </strong> <br> IV Seminario Estudiantil de Ecuaciones Diferenciales y Educación Matemática<br>Vinculación con el Medio para el Fortalecimiento de la Enseñanza y las Matemáticas Aplicadas </div>
+    </div>
+    <div class="t-author">Renato Ortiz, Felipe Carrasco y Víctor Díaz</div>
+    <div class="t-institute"><strong>Dr. Eligio Colmenares</strong> <br>Facultad de Educación y Humanidades <br>Facultad de Ciencias<br><strong>Universidad del Bío-Bío</strong> </div>
+    <div class="t-date today-date"></div>
+    <div class="t-logos">
+      <img src="FACI.png" alt="Logo FACI" style="max-width:210px; max-height:100px;">
+      <img src="CCE.png" alt="Logo CCE" style="max-width:300px; max-height:200px;">
+      <img src="UBB.png" alt="Logo UBB" style="max-width:110px; max-height:100px;">
+      <img src="logo_CMM_25_ES_color.png" alt="Logo CMM" style="max-width:110px; max-height:130px;">
+      <img src="LOG_SEMINARIO.png" alt="Logo Seminario" style="max-width:110px; max-height:100px;">
+      <img src="FEDUH.png" alt="Logo FEDUH" style="max-width:210px; max-height:100px;">
+    </div>
+  </div>
+</section>
+
+
+<!-- ===================== SECCIÓN 0 · ESTRUCTURA / AGENDA ===================== -->
+<section class="slide" data-section="0" style="--scale: 2;">
+  <div class="topbar"><span class="topbar-left">EID · Epidemiología</span> <span class="topbar-center">Espacio de Interacción Didáctica</span> <span class="topbar-right">Universidad del Bío-Bío</span></div>
+  <div class="content">
+    <ul class="toc-list">
+      <li class="current"><span class="dot"></span>Estructura de la clase</li>
+      <li class="shaded"><span class="dot"></span>Objetivo del EID</li>
+      <li class="shaded"><span class="dot"></span>Preguntas de activación</li>
+      <li class="shaded"><span class="dot"></span>Motivación: modelo SIR</li>
+      <li class="shaded"><span class="dot"></span>Lectura de las ecuaciones</li>
+      <li class="shaded"><span class="dot"></span>Actividad Interactiva</li>
+      <li class="shaded"><span class="dot"></span>Espacio de reflexión e interacción</li>
+    </ul>
+  </div>
+</section>
+
+<section class="slide" data-section="0" style="--scale: 1.4;">
+  <div class="topbar"><span class="topbar-left">EID · Epidemiología</span> <span class="topbar-center">Espacio de Interacción Didáctica</span> <span class="topbar-right">Universidad del Bío-Bío</span></div>
+  <div class="frametitle">Estructura de la clase</div>
+  <div class="content">
+    <div class="tcb">
+      <div class="tcb-title">Agenda del día</div>
+      <div class="tcb-body">
+        <div class="eqtable">
+          <div class="lbl fragment">1 · Presentación, estructura de la clase y lectura del OAEID</div><div class="fragment"></div><div class="dom"></div>
+          <div class="lbl fragment">2 · Preguntas de Activación de conocimientos previos</div><div class="fragment"></div><div class="dom"></div>
+          <div class="lbl fragment">3 · Actividad con material concreto: Simulador</div><div class="fragment"></div><div class="dom"></div>
+          <div class="lbl fragment">4 · Motivación: modelo epidemiológico SIR</div><div class="fragment"></div><div class="dom"></div>
+          <div class="lbl fragment">5 · Lectura de las ecuaciones diferenciales</div><div class="fragment"></div><div class="dom"></div>
+          <div class="lbl fragment">6 · Guía interactiva y espacio de reflexión</div><div class="fragment"></div><div class="dom"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ===================== SECCIÓN 1 · OBJETIVO ===================== -->
+<section class="slide" data-section="1" style="--scale: 2;">
+  <div class="topbar"><span class="topbar-left">EID · Epidemiología</span> <span class="topbar-center">Espacio de Interacción Didáctica</span> <span class="topbar-right">Universidad del Bío-Bío</span></div>
+  <div class="content">
+    <ul class="toc-list">
+      <ul class="toc-list">
+      <li class="shaded"><span class="dot"></span>Estructura de la clase</li>
+      <li class="current"><span class="dot"></span>Objetivo del EID</li>
+      <li class="shaded"><span class="dot"></span>Preguntas de activación</li>
+      <li class="shaded"><span class="dot"></span>Motivación: modelo SIR</li>
+      <li class="shaded"><span class="dot"></span>Lectura de las ecuaciones</li>
+      <li class="shaded"><span class="dot"></span>Actividad Interactiva</li>
+      <li class="shaded"><span class="dot"></span>Espacio de reflexión e interacción</li>
+    </ul>
+  </ul></div>
+</section>
+
+<section class="slide" data-section="1" style="--scale: 1.8;">
+  <div class="topbar"><span class="topbar-left">EPIDEMIOLOGÍA</span> <span class="topbar-center">Espacio de Interacción Didáctica</span> <span class="topbar-right">Universidad del Bío-Bío</span></div>
+  <div class="frametitle">Objetivo de la sesión</div>
+  <div class="content">
+    <div class="tcb">
+      <div class="tcb-title"></div>
+      <div class="tcb-body">
+        <div class="eqtable">
+          <div class="lbl">OAEID</div><div><strong> Interpretar gráficas de funciones </strong> en el contexto de la <strong>Epidemiología</strong> por medio de un <strong>modelo simplificado de ecuaciones diferenciales ordinarias</strong>, mostrando una <strong> actitud participativa e interés por el aprendizaje.</strong> </div><div class="dom"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== SECCIÓN 2 · Motivacion ===================== -->
+<section class="slide" data-section="1" style="--scale: 2;">
+  <div class="topbar"><span class="topbar-left">EID · Epidemiología</span> <span class="topbar-center">Espacio de Interacción Didáctica</span> <span class="topbar-right">Universidad del Bío-Bío</span></div>
+  <div class="content">
+     <ul class="toc-list">
+      <ul class="toc-list">
+      <li class="shaded"><span class="dot"></span>Estructura de la clase</li>
+      <li class="shaded"><span class="dot"></span>Objetivo del EID</li>
+      <li class="current"><span class="dot"></span>Preguntas de activación</li>
+      <li class="shaded"><span class="dot"></span>Motivación: modelo SIR</li>
+      <li class="shaded"><span class="dot"></span>Lectura de las ecuaciones</li>
+      <li class="shaded"><span class="dot"></span>Actividad Interactiva</li>
+      <li class="shaded"><span class="dot"></span>Espacio de reflexión e interacción</li>
+    </ul>
+  </ul></div>
+</section>
+
+
+<section class="slide qa-slide" data-section="3" style="--scale: 2;">
+  <div class="topbar"><span class="topbar-left">EPIDEMIOLOGÍA</span> <span class="topbar-center">Espacio de Interacción Didáctica</span> <span class="topbar-right">Universidad del Bío-Bío</span></div>
+  <div class="frametitle">Preguntas de Activación</div>
+  <div class="content" style="padding:20px 40px;">
+    <div style="display:flex; gap:24px; height:100%;">
+
+      <!-- columna izquierda: preguntas + respuestas -->
+      <div class="qa-col">
+
+        <!-- PASO 0: Pregunta 1 sola (visible al entrar) -->
+        <div class="qa-panel" data-qa="0">
+          <div class="qa-question">¿Qué entiendes por un <strong>virus</strong>? ¿Cómo se producen los contagios?</div>
+        </div>
+
+        <!-- PASO 1: Pregunta 1 + Respuesta 1 (fragment 1) -->
+        <div class="qa-panel fragment" data-qa="1">
+          <div class="qa-question">¿Qué entiendes por un <strong>virus</strong>? ¿Cómo se producen los contagios?</div>
+          <div class="qa-answer">Un virus es un agente que infecta células y se replica; el <strong>contagio</strong> ocurre por contacto entre una persona infectada y una susceptible.</div>
+        </div>
+
+        <!-- PASO 2: Pregunta 2 sola (fragment 2) -->
+        <div class="qa-panel fragment" data-qa="2">
+          <div class="qa-question">¿Qué entiendes por una <strong>epidemia</strong>?</div>
+        </div>
+
+        <!-- PASO 3: Pregunta 2 + Respuesta 2 (fragment 3) -->
+        <div class="qa-panel fragment" data-qa="3">
+          <div class="qa-question">¿Qué entiendes por una <strong>epidemia</strong>?</div>
+          <div class="qa-answer">Es la propagación <strong>rápida y extendida</strong> de una enfermedad en una población durante un periodo determinado.</div>
+        </div>
+
+        <!-- PASO 4: Pregunta 3 sola (fragment 4) -->
+        <div class="qa-panel fragment" data-qa="4">
+          <div class="qa-question">¿Existirá alguna forma de representar matemáticamente cómo avanza una epidemia? ¿Para qué servirá?</div>
+        </div>
+
+        <!-- PASO 5: Pregunta 3 + Respuesta 3 (fragment 5) -->
+        <div class="qa-panel fragment" data-qa="5">
+          <div class="qa-question">¿Existirá alguna forma de representar matemáticamente cómo avanza una epidemia? ¿Para qué servirá?</div>
+          <div class="qa-answer">Sí: con <strong>modelos matemáticos</strong> (como el SIR) que permiten simular y predecir el avance de la enfermedad y evaluar medidas de control sin intervenir directamente en la población.</div>
+        </div>
+
+      </div>
+
+      <!-- columna derecha: animación del modelo SIR -->
+      <div style="flex:0 0 40%; display:flex; align-items:center; justify-content:center;">
+        <div class="sir-mini-panel">
+          <div class="sir-mini-head">Modelo SIR</div>
+          <div class="sir-mini-bar"><span id="qaBarS"></span><span id="qaBarI"></span><span id="qaBarR"></span></div>
+          <div class="sir-mini-legend">
+            <span><i class="sdot sS"></i>S <b id="qaCntS">0</b></span>
+            <span><i class="sdot sI"></i>I <b id="qaCntI">0</b></span>
+            <span><i class="sdot sR"></i>R <b id="qaCntR">0</b></span>
+          </div>
+          <div class="sir-mini-stage"><canvas id="qaAgentCanvas" class="sir-agents" data-role="sir-anim"></canvas>
+            <div class="sir-mini-time">día <b id="qaDay">0</b></div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+
+<!-- Simulador (actividad con material concreto — index a subir) -->
+<section class="slide" data-section="3" style="--scale: 2;">
+  <div class="topbar"><span class="topbar-left">EPIDEMIOLOGÍA</span> <span class="topbar-center">Espacio de Interacción Didáctica</span> <span class="topbar-right">Universidad del Bío-Bío</span></div>
+  <div class="frametitle">SIMULADOR</div>
+  <div class="content" style="padding:0;">
+    <iframe src="Simulador/sim.html" style="width:100%; height:100%; border:0; display:block;"></iframe>
+  </div>
+</section>
+
+<!-- ===================== SECCIÓN 3 · Actividad con material concreto: Simulador ===================== -->
+<section class="slide" data-section="3" style="--scale: 2;">
+  <div class="topbar"><span class="topbar-left">EID · Epidemiología</span> <span class="topbar-center">Espacio de Interacción Didáctica</span> <span class="topbar-right">Universidad del Bío-Bío</span></div>
+  <div class="content">
+    <ul class="toc-list">
+      <ul class="toc-list">
+      <li class="shaded"><span class="dot"></span>Estructura de la clase</li>
+      <li class="shaded"><span class="dot"></span>Objetivo del EID</li>
+      <li class="shaded"><span class="dot"></span>Preguntas de activación</li>
+      <li class="current"><span class="dot"></span>Motivación: modelo SIR</li>
+      <li class="shaded"><span class="dot"></span>Lectura de las ecuaciones</li>
+      <li class="shaded"><span class="dot"></span>Actividad Interactiva</li>
+      <li class="shaded"><span class="dot"></span>Espacio de reflexión e interacción</li>
+    </ul>
+  </ul></div>
+</section>
+
+
+
+
+
+<!-- Motivación: qué es el modelo SIR (textos secuenciales) -->
+<section class="slide active" data-section="3" style="--scale: 1.7;">
+  <div class="topbar"><span class="topbar-left">EPIDEMIOLOGÍA</span> <span class="topbar-center">Espacio de Interacción Didáctica</span> <span class="topbar-right">Universidad del Bío-Bío</span></div>
+  <div class="frametitle">El modelo compartimental SIR</div>
+  <div class="content" style="padding:20px 40px;">
+    <div style="display:flex; flex-direction:column; justify-content:center; gap:20px; height:100%;">
+
+      <div class="lbl fragment">
+        El modelo <strong>SIR</strong> divide una <strong>población total y constante</strong> en tres compartimentos y describe cómo evoluciona la epidemia en el tiempo mediante un <strong>sistema de ecuaciones diferenciales</strong>.
+      </div>
+
+      <div class="tcb fragment">
+        <div class="tcb-body"><strong>Susceptibles S(t):</strong> individuos sanos que pueden contagiarse.</div>
+      </div>
+
+      <div class="tcb fragment">
+        <div class="tcb-body"><strong>Infectados I(t):</strong> individuos que tienen la enfermedad y pueden transmitirla.</div>
+      </div>
+
+      <div class="tcb fragment">
+        <div class="tcb-body"><strong>Recuperados R(t):</strong> individuos que sanaron y quedan inmunes (no vuelven a ser susceptibles).</div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- Diagrama compartimental (imagen mod.png) -->
+<section class="slide" data-section="3" style="--scale: 2;">
+  <div class="topbar"><span class="topbar-left">EPIDEMIOLOGÍA</span> <span class="topbar-center">Espacio de Interacción Didáctica</span> <span class="topbar-right">Universidad del Bío-Bío</span></div>
+  <div class="frametitle">Enfoque compartimental del modelo SIR</div>
+  <div class="content center" style="padding:8px 20px; min-height:0;">
+    <img src="mod.png" alt="Diagrama compartimental del modelo SIR" style="height:100%; width:auto; max-width:100%; display:block; object-fit:contain; border-radius:10px; box-shadow:0 2px 8px rgba(0,0,0,.2);">
+  </div>
+</section>
+
+<!-- ===================== SECCIÓN 5 · Lectura de las ecuaciones ===================== -->
+<section class="slide" data-section="3" style="--scale: 2;">
+  <div class="topbar"><span class="topbar-left">EID · Epidemiología</span> <span class="topbar-center">Espacio de Interacción Didáctica</span> <span class="topbar-right">Universidad del Bío-Bío</span></div>
+  <div class="content">
+    <ul class="toc-list">
+      <ul class="toc-list">
+      <li class="shaded"><span class="dot"></span>Estructura de la clase</li>
+      <li class="shaded"><span class="dot"></span>Objetivo del EID</li>
+      <li class="shaded"><span class="dot"></span>Preguntas de activación</li>
+      <li class="shaded"><span class="dot"></span>Motivación: modelo SIR</li>
+      <li class="current"><span class="dot"></span>Lectura de las ecuaciones</li>
+      <li class="shaded"><span class="dot"></span>Actividad Interactiva</li>
+      <li class="shaded"><span class="dot"></span>Espacio de reflexión e interacción</li>
+    </ul>
+  </ul></div>
+</section>
+
+
+
+<!-- Ecuación de Susceptibles S(t) -->
+<section class="slide qa-slide" data-section="3" style="--scale: 2.3;">
+  <div class="topbar"><span class="topbar-left">EPIDEMIOLOGÍA</span> <span class="topbar-center">Espacio de Interacción Didáctica</span> <span class="topbar-right">Universidad del Bío-Bío</span></div>
+  <div class="frametitle">Ecuación de los susceptibles</div>
+  <div class="content" style="padding:250px 80px;">
+    <div class="qa-col" style="flex:1 1 100%; align-items:center; text-align:center;">
+
+      <!-- PASO 0: solo la ecuación -->
+      <div class="qa-panel" data-qa="0" style="align-items:center;">
+        <div>\[\vphantom{\underbrace{\frac{dS}{dt}}_{\substack{\text{Nuevos contagios}\\\text{(salen de S)}}}}\frac{d\textcolor{blue}{S}}{dt} \;=\; -\,\beta\,\textcolor{blue}{S}\,\textcolor{red}{I}\]</div>
+      </div>
+
+      <!-- PASO 1: + lectura tasa de cambio -->
+      <div class="qa-panel fragment" data-qa="1" style="align-items:center;">
+        <div>\[\underbrace{\frac{d\textcolor{blue}{S}}{dt}}_{\substack{\text{Tasa de cambio}\\\text{de susceptibles}}} \;=\; \vphantom{\underbrace{\frac{dS}{dt}}_{\substack{\text{Nuevos contagios}\\\text{(salen de S)}}}}-\,\beta\,\textcolor{blue}{S}\,\textcolor{red}{I}\]</div>
+      </div>
+
+      <!-- PASO 2: completa (+ lectura contagios) -->
+      <div class="qa-panel fragment" data-qa="2" style="align-items:center;">
+        <div>\[\underbrace{\frac{d\textcolor{blue}{S}}{dt}}_{\substack{\text{Tasa de cambio}\\\text{de susceptibles}}} \;=\; -\,\underbrace{\beta\,\textcolor{blue}{S}\,\textcolor{red}{I}}_{\substack{\text{Nuevos contagios}\\\text{(salen de S)}}}\]</div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- Ecuación de Infectados I(t) -->
+<section class="slide qa-slide" data-section="3" style="--scale: 2.3;">
+  <div class="topbar"><span class="topbar-left">EPIDEMIOLOGÍA</span> <span class="topbar-center">Espacio de Interacción Didáctica</span> <span class="topbar-right">Universidad del Bío-Bío</span></div>
+  <div class="frametitle">Ecuación de los infectados</div>
+  <div class="content" style="padding:250px 80px;">
+    <div class="qa-col" style="flex:1 1 100%; align-items:center; text-align:center;">
+
+      <!-- PASO 0: solo la ecuación -->
+      <div class="qa-panel" data-qa="0" style="align-items:center;">
+        <div>\[\vphantom{\underbrace{\frac{dI}{dt}}_{\substack{\text{Recuperaciones}\\\text{(salen de I)}}}}\frac{d\textcolor{red}{I}}{dt} \;=\; \beta\,\textcolor{blue}{S}\,\textcolor{red}{I} \;-\; \gamma\,\textcolor{red}{I}\]</div>
+      </div>
+
+      <!-- PASO 1: + lectura tasa de cambio -->
+      <div class="qa-panel fragment" data-qa="1" style="align-items:center;">
+        <div>\[\underbrace{\frac{d\textcolor{red}{I}}{dt}}_{\substack{\text{Tasa de cambio}\\\text{de infectados}}} \;=\; \vphantom{\underbrace{\frac{dI}{dt}}_{\substack{\text{Recuperaciones}\\\text{(salen de I)}}}}\beta\,\textcolor{blue}{S}\,\textcolor{red}{I} \;-\; \gamma\,\textcolor{red}{I}\]</div>
+      </div>
+
+      <!-- PASO 2: + lectura contagios (entran) -->
+      <div class="qa-panel fragment" data-qa="2" style="align-items:center;">
+        <div>\[\underbrace{\frac{d\textcolor{red}{I}}{dt}}_{\substack{\text{Tasa de cambio}\\\text{de infectados}}} \;=\; \underbrace{\beta\,\textcolor{blue}{S}\,\textcolor{red}{I}}_{\substack{\text{Contagios}\\\text{(entran a I)}}} \;-\; \vphantom{\underbrace{\frac{dI}{dt}}_{\substack{\text{Recuperaciones}\\\text{(salen de I)}}}}\gamma\,\textcolor{red}{I}\]</div>
+      </div>
+
+      <!-- PASO 3: completa (+ lectura recuperaciones) -->
+      <div class="qa-panel fragment" data-qa="3" style="align-items:center;">
+        <div>\[\underbrace{\frac{d\textcolor{red}{I}}{dt}}_{\substack{\text{Tasa de cambio}\\\text{de infectados}}} \;=\; \underbrace{\beta\,\textcolor{blue}{S}\,\textcolor{red}{I}}_{\substack{\text{Contagios}\\\text{(entran a I)}}} \;-\; \underbrace{\gamma\,\textcolor{red}{I}}_{\substack{\text{Recuperaciones}\\\text{(salen de I)}}}\]</div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- Ecuación de Recuperados R(t) -->
+<section class="slide qa-slide" data-section="3" style="--scale: 2.3;">
+  <div class="topbar"><span class="topbar-left">EPIDEMIOLOGÍA</span> <span class="topbar-center">Espacio de Interacción Didáctica</span> <span class="topbar-right">Universidad del Bío-Bío</span></div>
+  <div class="frametitle">Ecuación de los recuperados</div>
+  <div class="content" style="padding:250px 80px;">
+    <div class="qa-col" style="flex:1 1 100%; align-items:center; text-align:center;">
+
+      <!-- PASO 0: solo la ecuación -->
+      <div class="qa-panel" data-qa="0" style="align-items:center;">
+        <div>\[\vphantom{\underbrace{\frac{dR}{dt}}_{\substack{\text{Recuperaciones}\\\text{(entran a R)}}}}\frac{d\textcolor{green}{R}}{dt} \;=\; \gamma\,\textcolor{red}{I}\]</div>
+      </div>
+
+      <!-- PASO 1: + lectura tasa de cambio -->
+      <div class="qa-panel fragment" data-qa="1" style="align-items:center;">
+        <div>\[\underbrace{\frac{d\textcolor{green}{R}}{dt}}_{\substack{\text{Tasa de cambio}\\\text{de recuperados}}} \;=\; \vphantom{\underbrace{\frac{dR}{dt}}_{\substack{\text{Recuperaciones}\\\text{(entran a R)}}}}\gamma\,\textcolor{red}{I}\]</div>
+      </div>
+
+      <!-- PASO 2: completa (+ lectura recuperaciones) -->
+      <div class="qa-panel fragment" data-qa="2" style="align-items:center;">
+        <div>\[\underbrace{\frac{d\textcolor{green}{R}}{dt}}_{\substack{\text{Tasa de cambio}\\\text{de recuperados}}} \;=\; \underbrace{\gamma\,\textcolor{red}{I}}_{\substack{\text{Recuperaciones}\\\text{(entran a R)}}}\]</div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ===================== SECCIÓN 6 · Guía interactiva ===================== -->
+<section class="slide" data-section="3" style="--scale: 2;">
+  <div class="topbar"><span class="topbar-left">EID · Epidemiología</span> <span class="topbar-center">Espacio de Interacción Didáctica</span> <span class="topbar-right">Universidad del Bío-Bío</span></div>
+  <div class="content">
+    <ul class="toc-list">
+      <li class="shaded"><span class="dot"></span>Estructura de la clase</li>
+      <li class="shaded"><span class="dot"></span>Objetivo del EID</li>
+      <li class="shaded"><span class="dot"></span>Preguntas de activación</li>
+      <li class="shaded"><span class="dot"></span>Simulador</li>
+      <li class="shaded"><span class="dot"></span>Motivación: modelo SIR</li>
+      <li class="shaded"><span class="dot"></span>Lectura de las ecuaciones</li>
+      <li class="current"><span class="dot"></span>Guía interactiva y reflexión</li>
+    </ul>
+  </div>
+</section>
+
+
+<section class="slide" data-section="2" style="--scale: 2;">
+  <div class="topbar"><span class="topbar-left">EPIDEMIOLOGÍA</span> <span class="topbar-center">Espacio de Interacción Didáctica</span> <span class="topbar-right">Universidad del Bío-Bío</span></div>
+  <div class="frametitle">Guía interactiva</div>
+  <div class="content" style="padding:0;">
+    <iframe src="Guia_Interactiva/guia.html" style="width:100%; height:100%; border:0; display:block;"></iframe>
+  </div>
+</section>
+
+
+<section class="slide" data-section="4" style="--scale: 2;">
+  <div class="topbar"><span class="topbar-left">EPIDEMIOLOGÍA</span> <span class="topbar-center">Espacio de Interacción Didáctica</span> <span class="topbar-right">Universidad del Bío-Bío</span></div>
+  <div class="content">
+    <ol class="bib-list">
+      <li>Referencia 01 <em>cursiva</em>, Año.</li>
+      <li>Referencia 02 <em>cursiva</em>, Año.</li>
+    </ol>
+  </div>
+</section>
+
+<section class="slide" data-section="4" style="--scale: 2;">
+  <div class="topbar"><span class="topbar-left">EPIDEMIOLOGÍA</span> <span class="topbar-center">Espacio de Interacción Didáctica</span> <span class="topbar-right">Universidad del Bío-Bío</span></div>
+  <div class="content center">
+    <div class="final-slide">
+      <div class="calligra">Gracias por su atención…</div>
+      <div class="calligra">Instancia para preguntas</div>
+    </div>
+  </div>
+</section>
+
+
+  <div class="footbar global" id="globalFootbar">
+    <div class="fb-author"> <strong>Escuela de Pedagogía en Educación Matemática</strong>  </div>
+    <div class="fb-title">IV SE²D–PEM · UBB 2026</div>
+    <div class="fb-date">
+      <div class="fb-controls">
+        <button id="prevBtn" title="Anterior (←)">‹</button>
+        <button id="timerBtn" title="Temporizador (T)">◔</button>
+        <button id="saveBtn" title="Guardar copia del index.html con los tamaños actuales (Ctrl+S)">⬇</button>
+        <button id="fsBtn" title="Pantalla completa (F)">⤢</button>
+        <button id="nextBtn" title="Siguiente (→)">›</button>
+      </div>
+      <span class="fb-page" id="globalPage"></span>
+      <span class="today-date" id="globalDate"></span>
+    </div>
+  </div>
+
+  <!-- ═══════════ TEMPORIZADOR GLOBAL (flota sobre el encabezado en CUALQUIER slide) ═══════════ -->
+  <div id="digTimer" class="dig-timer">
+    <div class="dt-ring-wrap">
+      <svg class="dt-ring" viewBox="0 0 120 120" aria-hidden="true">
+        <circle class="dt-ring-bg" cx="60" cy="60" r="54"></circle>
+        <circle class="dt-ring-fg" id="dtRing" cx="60" cy="60" r="54"></circle>
+      </svg>
+      <div class="dt-clock">
+        <input class="dt-field" id="dtMin" inputmode="numeric" maxlength="2" value="01" aria-label="minutos">
+        <span class="dt-colon">:</span>
+        <input class="dt-field" id="dtSec" inputmode="numeric" maxlength="2" value="00" aria-label="segundos">
+      </div>
+    </div>
+    <div class="dt-btns">
+      <button class="dt-btn dt-reset" id="dtReset" title="Reiniciar">↺</button>
+      <button class="dt-btn dt-play" id="dtPlay" title="Iniciar / Pausar">▶</button>
+    </div>
+  </div>
+
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+<script>
+(function(){
+  var slides = Array.prototype.slice.call(document.querySelectorAll('.slide'));
+  var total = slides.length;
+  var idx = slides.findIndex(function(s){return s.classList.contains('active');});
+  if(idx < 0){ idx = 0; }
+
+  // ---- pristine snapshot, taken before ANY runtime mutation (KaTeX rendering,
+  // class toggling, the stage-fit transform, etc). Per-slide zoom changes are
+  // mirrored onto this clone too, so "export" can write back clean source HTML
+  // (original \(...\) LaTeX, no frozen runtime state) with just the size tweaks
+  // baked in as a style="--scale:N" attribute on each slide. ----
+  var pristineDoc = document.documentElement.cloneNode(true);
+  var pristineSlides = Array.prototype.slice.call(pristineDoc.querySelectorAll('.slide'));
+
+  // ---- resume where you left off: while editing the HTML you'd otherwise have to
+  // click "next" all the way back to your slide after every reload. The URL hash
+  // (#7) and localStorage both remember the last slide; the hash wins if present,
+  // since it survives copy/paste, bookmarking, and manual F5 refreshes too. ----
+  function readHashSlide(){
+    var n = parseInt(location.hash.replace('#',''), 10);
+    if(!isNaN(n) && n>=1 && n<=total) return n-1;
+    return null;
+  }
+  function readStoredSlide(){
+    try {
+      var s = parseInt(localStorage.getItem('uow_pres_slide'), 10);
+      if(!isNaN(s) && s>=0 && s<total) return s;
+    } catch(e){}
+    return null;
+  }
+  var resume = readHashSlide();
+  if(resume === null) resume = readStoredSlide();
+  if(resume !== null) idx = resume;
+
+  var stage = document.getElementById('stage');
+  var viewport = document.getElementById('viewport');
+  var progress = document.getElementById('progress');
+  var prevBtn = document.getElementById('prevBtn');
+  var nextBtn = document.getElementById('nextBtn');
+  var fsBtn = document.getElementById('fsBtn');
+  var saveBtn = document.getElementById('saveBtn');
+  var hint = document.getElementById('hint');
+  var globalDate = document.getElementById('globalDate');
+  var globalPage = document.getElementById('globalPage');
+
+  // the author/title/date footer is identical on every slide, so it lives once
+  // in the markup (#globalFootbar) instead of being repeated on every section; only
+  // the "N / total" page counter actually changes, and that's updated here on navigation.
+  function fillFooter(){
+    var dateStr = new Date().toLocaleDateString('es-ES', {day:'numeric', month:'long', year:'numeric'});
+    globalDate.textContent = dateStr;
+  }
+
+  // ---- per-slide independent zoom -------------------------------------------------
+  // Each slide section carries its own --scale custom property (inline
+  // style). CSS already reads var(--scale) everywhere (font-size, image max-height,
+  // etc.), so setting it on one slide element only ever affects that slide — slides
+  // left untouched simply inherit the :root default of 1. No global flag involved.
+  var SCALE_MIN = 0.6, SCALE_MAX = 2.0, SCALE_STEP = 0.1;
+  var SCALE_KEY = 'uow_pres_slide_scales';
+
+  function loadScaleMap(){
+    try {
+      var raw = localStorage.getItem(SCALE_KEY);
+      return raw ? JSON.parse(raw) : {};
+    } catch(e){ return {}; }
+  }
+  function saveScaleMap(map){
+    try { localStorage.setItem(SCALE_KEY, JSON.stringify(map)); } catch(e){}
+  }
+  function getScale(slideEl){
+    var v = parseFloat(slideEl.style.getPropertyValue('--scale'));
+    return isNaN(v) ? 1 : v;
+  }
+  function setScale(i, value){
+    value = Math.max(SCALE_MIN, Math.min(SCALE_MAX, +value.toFixed(2)));
+    slides[i].style.setProperty('--scale', value);
+    pristineSlides[i].style.setProperty('--scale', value);
+    var map = loadScaleMap();
+    if(value === 1){ delete map[i]; } else { map[i] = value; }
+    saveScaleMap(map);
+    updateZoomDisplay();
+  }
+  function scaleUp(){ setScale(idx, getScale(slides[idx]) + SCALE_STEP); }
+  function scaleDown(){ setScale(idx, getScale(slides[idx]) - SCALE_STEP); }
+
+  // Restore any scales saved from a previous session that haven't been exported
+  // into the file yet. A value already baked into the HTML (inline style coming
+  // straight from the source file) always wins over a leftover localStorage entry.
+  (function restoreSavedScales(){
+    var map = loadScaleMap();
+    Object.keys(map).forEach(function(key){
+      var i = parseInt(key, 10);
+      if(isNaN(i) || i<0 || i>=total) return;
+      if(slides[i].style.getPropertyValue('--scale')) return; // file already sets it
+      slides[i].style.setProperty('--scale', map[i]);
+      pristineSlides[i].style.setProperty('--scale', map[i]);
+    });
+  })();
+
+  function updateZoomDisplay(){
+    var pct = Math.round(getScale(slides[idx]) * 100);
+    globalPage.textContent = (idx+1) + ' / ' + total + (pct !== 100 ? '  \u00b7  ' + pct + '%' : '');
+  }
+
+  // ---- export: download a copy of this same file with the per-slide sizes baked in ----
+  function exportHTML(){
+    pristineSlides.forEach(function(s, i){ s.classList.toggle('active', i === idx); });
+    var html = '<!DOCTYPE html>\n' + pristineDoc.outerHTML;
+    var blob = new Blob([html], {type:'text/html'});
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = 'index.html';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(function(){ URL.revokeObjectURL(url); }, 1000);
+  }
+  saveBtn.addEventListener('click', exportHTML);
+
+  // ---- fragments: reveal pieces of a slide one at a time ---------------------------
+  // Two opt-in modes, same visual style, pick whichever fits each slide:
+  //   class="fragment"       -> click-driven. Each press of next/prev (clicker,
+  //                              arrow keys, swipe, the on-screen buttons) reveals
+  //                              or hides one more piece, like a PowerPoint "appear"
+  //                              build, before the deck actually changes slide.
+  //   class="fragment-auto"  -> time-driven. Reveals on its own, staggered, the
+  //                              moment you land on the slide — no clicks needed.
+  //                              Optional data-delay="600" (ms) per element to tune
+  //                              its own timing; otherwise a sensible default stagger.
+  // Both can be mixed on the same slide if needed.
+  var fragRevealed = {}; // slideIndex -> how many .fragment elements are currently shown
+
+  function getFragments(slideEl){
+    return Array.prototype.slice.call(slideEl.querySelectorAll('.fragment'));
+  }
+  function applyFragmentVisibility(i){
+    var frags = getFragments(slides[i]);
+    var n = fragRevealed[i] || 0;
+    frags.forEach(function(el, j){ el.classList.toggle('visible', j < n); });
+    // Sync QA panels for slides that use the qa-slide pattern
+    syncQAPanels(slides[i], n);
+  }
+
+  // For .qa-slide: show only the panel whose data-qa == n, hide all others.
+  // Panel 0 has no .fragment (always in DOM), panels 1-N do.
+  function syncQAPanels(slideEl, n){
+    var panels = Array.prototype.slice.call(slideEl.querySelectorAll('.qa-panel'));
+    if(!panels.length) return;
+    panels.forEach(function(p){
+      var qa = parseInt(p.getAttribute('data-qa'), 10);
+      var show = (qa === n);
+      p.style.opacity = show ? '1' : '0';
+      p.style.pointerEvents = show ? 'auto' : 'none';
+    });
+  }
+  function setRevealed(i, n){
+    fragRevealed[i] = n;
+    applyFragmentVisibility(i);
+  }
+
+  var autoTimers = [];
+  function clearAutoTimers(){
+    autoTimers.forEach(clearTimeout);
+    autoTimers = [];
+  }
+  function playAutoFragments(slideEl){
+    clearAutoTimers();
+    var els = Array.prototype.slice.call(slideEl.querySelectorAll('.fragment-auto'));
+    els.forEach(function(el){ el.classList.remove('visible'); });
+    els.forEach(function(el, i){
+      var delay = parseInt(el.getAttribute('data-delay'), 10);
+      if(isNaN(delay)) delay = 160 + i*220;
+      autoTimers.push(setTimeout(function(){ el.classList.add('visible'); }, delay));
+    });
+  }
+
+  var lastIdx = -1;
+
+  // ---- animación de agentes SIR: corre solo mientras su diapositiva está activa ----
+  var sirAnim = (function(){
+    var canvas = document.getElementById('qaAgentCanvas');
+    if(!canvas) return { start:function(){}, stop:function(){} };
+    var ctx = canvas.getContext('2d');
+    var COL = {S:'#2D9CDB', I:'#E8503A', R:'#3FBF6A'};
+    var NUM = 60, RADIUS = 28, BETA = 0.10, RECOVER = 7, DPS = 6, SPEED = 70;
+    var W = 0, Hc = 0, dpr = 1;
+    var agents = [], day = 0, lastTs = 0, resetT = 0, raf = null, running = false;
+
+    function resize(){
+      dpr = window.devicePixelRatio || 1;
+      var r = canvas.getBoundingClientRect();
+      if(r.width === 0){ return; }
+      W = r.width; Hc = r.height;
+      canvas.width = Math.round(W*dpr); canvas.height = Math.round(Hc*dpr);
+      ctx.setTransform(dpr,0,0,dpr,0,0);
+    }
+    function spawn(){
+      agents = [];
+      for(var i=0;i<NUM;i++){
+        agents.push({x:Math.random()*W, y:Math.random()*Hc,
+          vx:(Math.random()-.5)*SPEED, vy:(Math.random()-.5)*SPEED, state:'S', tInf:0});
+      }
+      for(var k=0;k<3;k++){ agents[(Math.random()*NUM)|0].state='I'; }
+      day = 0; resetT = 0;
+    }
+    function step(dt){
+      day += dt*DPS;
+      for(var i=0;i<agents.length;i++){
+        var a=agents[i];
+        a.x+=a.vx*dt; a.y+=a.vy*dt;
+        if(a.x<0){a.x=0;a.vx*=-1;} if(a.x>W){a.x=W;a.vx*=-1;}
+        if(a.y<0){a.y=0;a.vy*=-1;} if(a.y>Hc){a.y=Hc;a.vy*=-1;}
+        if(a.state==='I'){ a.tInf+=dt*DPS; if(a.tInf>=RECOVER) a.state='R'; }
+      }
+      for(var m=0;m<agents.length;m++){
+        if(agents[m].state!=='I') continue;
+        for(var n=0;n<agents.length;n++){
+          if(agents[n].state!=='S') continue;
+          var dx=agents[m].x-agents[n].x, dy=agents[m].y-agents[n].y;
+          if(dx*dx+dy*dy < RADIUS*RADIUS && Math.random()<BETA){ agents[n].state='I'; agents[n].tInf=0; }
+        }
+      }
+    }
+    function counts(){ var s=0,i=0,r=0; for(var k=0;k<agents.length;k++){var st=agents[k].state; if(st==='S')s++; else if(st==='I')i++; else r++;} return {s:s,i:i,r:r}; }
+    function draw(){
+      ctx.clearRect(0,0,W,Hc);
+      for(var i=0;i<agents.length;i++){ var a=agents[i]; if(a.state==='I') continue;
+        ctx.beginPath(); ctx.arc(a.x,a.y,5,0,Math.PI*2);
+        ctx.fillStyle=a.state==='S'?COL.S:COL.R; ctx.fill();
+        ctx.lineWidth=1.4; ctx.strokeStyle='rgba(255,255,255,.25)'; ctx.stroke();
+      }
+      for(var j=0;j<agents.length;j++){ var b=agents[j]; if(b.state!=='I') continue;
+        var g=ctx.createRadialGradient(b.x,b.y,1,b.x,b.y,14);
+        g.addColorStop(0,'rgba(232,80,58,.55)'); g.addColorStop(1,'rgba(232,80,58,0)');
+        ctx.beginPath(); ctx.arc(b.x,b.y,14,0,Math.PI*2); ctx.fillStyle=g; ctx.fill();
+        ctx.beginPath(); ctx.arc(b.x,b.y,5.5,0,Math.PI*2); ctx.fillStyle=COL.I; ctx.fill();
+      }
+    }
+    function hud(){
+      var c=counts(), tot=c.s+c.i+c.r||1;
+      var e;
+      if(e=document.getElementById('qaCntS')) e.textContent=c.s;
+      if(e=document.getElementById('qaCntI')) e.textContent=c.i;
+      if(e=document.getElementById('qaCntR')) e.textContent=c.r;
+      if(e=document.getElementById('qaDay')) e.textContent=day.toFixed(1);
+      if(e=document.getElementById('qaBarS')) e.style.width=(100*c.s/tot)+'%';
+      if(e=document.getElementById('qaBarI')) e.style.width=(100*c.i/tot)+'%';
+      if(e=document.getElementById('qaBarR')) e.style.width=(100*c.r/tot)+'%';
+      return c;
+    }
+    function loop(ts){
+      if(!running) return;
+      if(!lastTs) lastTs=ts;
+      var dt=(ts-lastTs)/1000; lastTs=ts; if(dt>0.05) dt=0.05;
+      step(dt); draw();
+      var c=hud();
+      if(c.i===0){ resetT+=dt; if(resetT>2.2) spawn(); }
+      raf=requestAnimationFrame(loop);
+    }
+    return {
+      start:function(){
+        if(running) return;
+        running=true; lastTs=0;
+        resize();
+        if(W===0){ // el slide aún está en transición de opacidad; reintenta
+          var tries=0;
+          var wait=setInterval(function(){
+            resize();
+            if(W>0 || tries++>20){ clearInterval(wait); if(W>0 && !agents.length) spawn(); }
+          }, 60);
+        }
+        if(!agents.length) spawn();
+        raf=requestAnimationFrame(loop);
+      },
+      stop:function(){ running=false; if(raf) cancelAnimationFrame(raf); }
+    };
+  })();
+
+  // ---- videos con autoplay+loop: se reproducen solo mientras su diapositiva
+  // está activa; al salir de la diapositiva se pausan y se rebobinan, para
+  // que la próxima vez que se entre vuelvan a arrancar desde el inicio.
+  function manageAutoplayVideos(activeIdx){
+    slides.forEach(function(s, i){
+      var vids = s.querySelectorAll('video.autoplay-loop-video');
+      vids.forEach(function(v){
+        if(i === activeIdx){
+          v.currentTime = 0;
+          var p = v.play();
+          if(p && p.catch) p.catch(function(){});
+        } else {
+          v.pause();
+          v.currentTime = 0;
+        }
+      });
+    });
+  }
+
+  // ---- animación SIR: activa solo en la diapositiva que la contiene ----
+  function manageSIRAnim(activeIdx){
+    var hasAnim = slides[activeIdx] && slides[activeIdx].querySelector('[data-role="sir-anim"]');
+    if(hasAnim){ sirAnim.start(); } else { sirAnim.stop(); }
+  }
+
+  function update(){
+    var changed = idx !== lastIdx;
+    slides.forEach(function(s, i){ s.classList.toggle('active', i === idx); });
+    progress.style.width = ((idx+1)/total*100) + '%';
+    updateZoomDisplay();
+    prevBtn.disabled = idx === 0;
+    nextBtn.disabled = idx === total-1;
+    try { history.replaceState(null, '', '#' + (idx+1)); } catch(e){}
+    try { localStorage.setItem('uow_pres_slide', idx); } catch(e){}
+    if(changed){
+      playAutoFragments(slides[idx]);
+      manageAutoplayVideos(idx);
+      manageSIRAnim(idx);
+      lastIdx = idx;
+    }
+  }
+
+  function goTo(i){
+    if(i < 0) i = 0;
+    if(i > total-1) i = total-1;
+    idx = i;
+    setRevealed(idx, getFragments(slides[idx]).length); // jumping straight here -> show it fully built
+    update();
+  }
+  function next(){
+    var frags = getFragments(slides[idx]);
+    var n = fragRevealed[idx] || 0;
+    if(n < frags.length){ setRevealed(idx, n + 1); return; }
+    if(idx < total - 1){
+      idx = idx + 1;
+      setRevealed(idx, 0); // arriving forward -> build it up one click at a time
+      update();
+    }
+  }
+  function prev(){
+    var n = fragRevealed[idx] || 0;
+    if(n > 0){ setRevealed(idx, n - 1); return; }
+    if(idx > 0){
+      idx = idx - 1;
+      setRevealed(idx, getFragments(slides[idx]).length); // arriving backward -> already fully built
+      update();
+    }
+  }
+
+  prevBtn.addEventListener('click', prev);
+  nextBtn.addEventListener('click', next);
+
+  window.addEventListener('hashchange', function(){
+    var h = readHashSlide();
+    if(h !== null && h !== idx){ goTo(h); }
+  });
+
+  document.addEventListener('keydown', function(e){
+    if((e.key === 's' || e.key === 'S') && (e.ctrlKey || e.metaKey)){ e.preventDefault(); exportHTML(); return; }
+    if(e.key === 'ArrowRight' || e.key === ' ' || e.key === 'PageDown'){ e.preventDefault(); next(); }
+    else if(e.key === 'ArrowLeft' || e.key === 'PageUp'){ e.preventDefault(); prev(); }
+    else if(e.key === 'Home'){ e.preventDefault(); goTo(0); }
+    else if(e.key === 'End'){ e.preventDefault(); goTo(total-1); }
+    else if(e.key === 'f' || e.key === 'F'){ toggleFullscreen(); }
+    else if(e.key === '+' || e.key === '='){ scaleUp(); }
+    else if(e.key === '-' || e.key === '_'){ scaleDown(); }
+    else if((e.key === 't' || e.key === 'T') && !e.ctrlKey && !e.metaKey){
+      // no dispares si estás escribiendo en el propio input del timer
+      if(document.activeElement && document.activeElement.classList.contains('dt-field')) return;
+      e.preventDefault(); if(window.__toggleTimer) window.__toggleTimer();
+    }
+  });
+
+  var touchStartX = null;
+  viewport.addEventListener('touchstart', function(e){ touchStartX = e.changedTouches[0].clientX; }, {passive:true});
+  viewport.addEventListener('touchend', function(e){
+    if(touchStartX === null) return;
+    var dx = e.changedTouches[0].clientX - touchStartX;
+    if(Math.abs(dx) > 50){ dx < 0 ? next() : prev(); }
+    touchStartX = null;
+  }, {passive:true});
+
+  function toggleFullscreen(){
+    if(!document.fullscreenElement){
+      (stage.requestFullscreen || stage.webkitRequestFullscreen || function(){}).call(stage);
+    } else {
+      (document.exitFullscreen || document.webkitExitFullscreen || function(){}).call(document);
+    }
+  }
+  fsBtn.addEventListener('click', toggleFullscreen);
+
+  function fitStage(){
+    var vw = viewport.clientWidth, vh = viewport.clientHeight;
+    var fitScale = Math.min(vw/1280, vh/720) * 0.94;
+    stage.style.transform = 'scale(' + fitScale + ')';
+  }
+  window.addEventListener('resize', fitStage);
+  document.addEventListener('fullscreenchange', fitStage);
+  fitStage();
+
+  fillFooter();
+  setRevealed(idx, getFragments(slides[idx]).length);
+  update();
+
+  if(window.renderMathInElement){
+    renderMathInElement(document.body, {
+      delimiters: [
+        {left: "\\[", right: "\\]", display: true},
+        {left: "\\(", right: "\\)", display: false}
+      ],
+      throwOnError: false
+    });
+  }
+
+  setTimeout(function(){ hint.classList.add('show'); }, 400);
+  setTimeout(function(){ hint.classList.remove('show'); }, 3800);
+
+  // ════════════════════════════════════════════════════════════════
+  //  TEMPORIZADOR (anclado en la banda azul del encabezado, a la derecha)
+  //   · Botón ◔ del footbar (o tecla "T") lo muestra/oculta.
+  //   · Aparece solo en la diapositiva de Preguntas de Activación.
+  //   · Se ESCRIBE el tiempo en los campos MM : SS.
+  //   · ▶/⏸ inicia-pausa, ↺ reinicia. Aro de progreso + alerta al llegar a 0.
+  // ════════════════════════════════════════════════════════════════
+  (function initDigitalTimer(){
+    var box   = document.getElementById('digTimer');
+    if(!box) return;
+    var btn   = document.getElementById('timerBtn');
+    var minEl = document.getElementById('dtMin');
+    var secEl = document.getElementById('dtSec');
+    var playB = document.getElementById('dtPlay');
+    var resetB= document.getElementById('dtReset');
+    var ring  = document.getElementById('dtRing');
+
+    var CIRC = 2 * Math.PI * 54;
+    ring.style.strokeDasharray = CIRC.toFixed(2);
+
+    var totalSec = 60, remaining = 60, running = false, tickId = null;
+
+    function pad(n){ n = Math.max(0, n|0); return (n<10?'0':'')+n; }
+    function writeFields(sec){ minEl.value = pad(Math.floor(sec/60)); secEl.value = pad(sec%60); }
+    function readFields(){
+      var m = parseInt(minEl.value,10); if(isNaN(m)) m=0;
+      var s = parseInt(secEl.value,10); if(isNaN(s)) s=0;
+      m = Math.min(99, Math.max(0, m));
+      s = Math.min(59, Math.max(0, s));
+      totalSec = m*60 + s; if(totalSec < 1) totalSec = 1;
+      remaining = totalSec; writeFields(remaining);
+    }
+    function setState(){
+      box.classList.remove('running','warning','danger','done');
+      if(remaining <= 0){ box.classList.add('done','danger'); return; }
+      if(running) box.classList.add('running');
+      if(remaining <= 5) box.classList.add('danger');
+      else if(remaining <= 10) box.classList.add('warning');
+    }
+    function paintRing(){
+      var frac = totalSec>0 ? remaining/totalSec : 0;
+      ring.style.strokeDashoffset = (CIRC*(1-frac)).toFixed(2);
+    }
+    function paint(){ writeFields(remaining); paintRing(); setState(); }
+
+    function beep(){
+      try {
+        var ac = new (window.AudioContext||window.webkitAudioContext)();
+        [0,0.28,0.56].forEach(function(t){
+          var o=ac.createOscillator(), g=ac.createGain();
+          o.connect(g); g.connect(ac.destination);
+          o.type='sine'; o.frequency.value=880;
+          g.gain.setValueAtTime(.0001, ac.currentTime+t);
+          g.gain.exponentialRampToValueAtTime(.3, ac.currentTime+t+0.02);
+          g.gain.exponentialRampToValueAtTime(.0001, ac.currentTime+t+0.22);
+          o.start(ac.currentTime+t); o.stop(ac.currentTime+t+0.24);
+        });
+      } catch(e){}
+    }
+    function stopTick(){ if(tickId){ clearInterval(tickId); tickId=null; } running=false; }
+    function tick(){
+      remaining--;
+      if(remaining <= 0){ remaining=0; paint(); stopTick(); box.classList.add('done'); beep(); playB.textContent='▶'; return; }
+      paint();
+    }
+    function play(){
+      if(running){ stopTick(); playB.textContent='▶'; setState(); return; }
+      if(remaining <= 0) readFields();
+      if(remaining <= 0) return;
+      running = true; playB.textContent='⏸'; setState();
+      tickId = setInterval(tick, 1000);
+    }
+    function reset(){
+      stopTick(); readFields();
+      box.classList.remove('done'); playB.textContent='▶'; paint();
+    }
+
+    // edición de campos
+    [minEl, secEl].forEach(function(el){
+      el.addEventListener('focus', function(){ if(running){ stopTick(); playB.textContent='▶'; setState(); } el.select(); });
+      el.addEventListener('input', function(){ el.value = el.value.replace(/[^0-9]/g,'').slice(0,2); });
+      el.addEventListener('blur', function(){ readFields(); paint(); });
+      el.addEventListener('keydown', function(e){
+        e.stopPropagation(); // no cambiar de diapositiva mientras se escribe
+        if(e.key === 'Enter'){ el.blur(); play(); e.preventDefault(); }
+        else if(e.key === 'ArrowUp' || e.key === 'ArrowDown'){
+          e.preventDefault();
+          var v = parseInt(el.value,10); if(isNaN(v)) v=0;
+          v += (e.key==='ArrowUp'?1:-1);
+          var max = (el===secEl?59:99);
+          if(v<0) v=max; if(v>max) v=0;
+          el.value = pad(v); readFields(); paint();
+        }
+      });
+    });
+
+    playB.addEventListener('click', play);
+    resetB.addEventListener('click', reset);
+
+    function show(){ box.classList.add('visible'); readFields(); paint(); }
+    function hide(){ stopTick(); box.classList.remove('visible'); playB.textContent='▶'; }
+    function toggle(){ box.classList.contains('visible') ? hide() : show(); }
+
+    btn.addEventListener('click', toggle);
+    window.__toggleTimer = toggle;
+
+    paint();
+  })();
+})();
+
+</script></body></html>

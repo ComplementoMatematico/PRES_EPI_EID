@@ -1,0 +1,759 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>La Matemática en la Epidemiología — Guía Interactiva (Modelo SIR)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<script>
+window.MathJax = { tex:{inlineMath:[['$','$'],['\\(','\\)']]}, svg:{fontCache:'global'} };
+</script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+<style>
+  :root{
+    --navy-deep:#03253F;
+    --navy:#0A3A5C;
+    --navy-line:#1F5C86;
+    --foam:#F1F5F9;
+    --paper:#FBFDFE;
+    --ink:#0B2233;
+    --ink-soft:#3D586B;
+    --S:#005A9C;   /* susceptibles - azul */
+    --I:#C82828;   /* infectados - rojo */
+    --R:#228B22;   /* recuperados - verde */
+    --accent:#2D9CDB;
+    --line:#D6E1EA;
+    --amber:#F5CE59;
+    --amber-line:#E0A82E;
+    --amber-bg:#FFF9E4;
+    --radius:14px;
+  }
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth; -webkit-text-size-adjust:100%;}
+  body{
+    margin:0; background:var(--foam); color:var(--ink);
+    font-family:'Inter',sans-serif; line-height:1.55; overflow-x:hidden;
+  }
+  img,svg,canvas{max-width:100%;}
+  h1,h2,h3{ font-family:'Fraunces',serif; letter-spacing:-0.01em; margin:0 0 .4em 0; overflow-wrap:break-word;}
+  .mono{font-family:'IBM Plex Mono',monospace;}
+  .container{max-width:1080px; margin:0 auto; padding:clamp(32px,6vw,56px) clamp(18px,5vw,24px);}
+  .eyebrow{
+    font-family:'IBM Plex Mono',monospace; font-size:clamp(.66rem,2.6vw,.72rem);
+    letter-spacing:.14em; text-transform:uppercase; color:var(--accent);
+    display:flex; align-items:center; gap:.6em; margin-bottom:.8em;
+  }
+  .eyebrow::before{ content:""; width:24px;height:2px; background:var(--accent); display:inline-block; flex:0 0 auto;}
+  .section-title{font-size:clamp(1.4rem,4.5vw,2.1rem); color:var(--navy);}
+  .lead{color:var(--ink-soft); max-width:70ch;}
+
+  /* ---------- HERO ---------- */
+  .hero{
+    background:radial-gradient(120% 140% at 15% -10%, #0C4C79 0%, var(--navy) 52%, #03253F 100%);
+    color:var(--foam); padding:clamp(40px,7vw,64px) clamp(18px,5vw,24px) 44px;
+    position:relative; overflow:hidden;
+  }
+  .hero-inner{max-width:1080px; margin:0 auto;}
+  .hero-grid{display:grid; grid-template-columns:1.05fr .95fr; gap:clamp(24px,5vw,44px); align-items:center;}
+  @media (max-width:860px){
+    .hero-grid{grid-template-columns:1fr;}
+    .hero-sim{order:-1;}  /* simulación arriba en móvil */
+  }
+  .hero-copy{min-width:0;}
+
+  /* panel de simulación de agentes */
+  .hero-sim{min-width:0;}
+  .sim-panel{
+    background:rgba(4,28,48,.55); border:1px solid #1C4A6E;
+    border-radius:16px; padding:16px 16px 14px; box-shadow:0 12px 34px rgba(0,0,0,.28);
+  }
+  .sim-head h3{color:#fff; font-size:1.15rem; margin:0;}
+  .sim-sub{font-family:'IBM Plex Mono',monospace; font-size:.72rem; color:#84AEC8; margin:.2em 0 0;}
+  .sim-bar{display:flex; height:9px; border-radius:100px; overflow:hidden; margin:12px 0 8px; background:#0B2f4b;}
+  .sim-bar span{display:block; height:100%; transition:width .3s ease;}
+  #barS{background:#2D9CDB;} #barI{background:#E8503A;} #barR{background:#3FBF6A;}
+  .sim-legend{display:flex; gap:16px; font-size:.76rem; color:#C7E3F2; margin-bottom:10px;}
+  .sim-legend b{color:#fff; margin-left:3px;}
+  .dot{display:inline-block; width:9px; height:9px; border-radius:50%; margin-right:2px; vertical-align:baseline;}
+  .dS{background:#2D9CDB;} .dI{background:#E8503A;} .dR{background:#3FBF6A;}
+  .sim-stage{position:relative; background:#07253f; border:1px solid #143f61; border-radius:12px; overflow:hidden; aspect-ratio:1 / .82;}
+  #agentCanvas{width:100%; height:100%; display:block;}
+  .sim-time{position:absolute; right:10px; bottom:8px; font-family:'IBM Plex Mono',monospace; font-size:.74rem; color:#9FC7E0;}
+  .sim-time b{color:#fff;}
+  .sim-foot{display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-top:10px;}
+  .sim-foot div{background:rgba(6,34,56,.7); border:1px solid #163f5f; border-radius:8px; padding:7px 9px; font-size:.68rem; color:#9FC7E0; display:flex; flex-direction:column; gap:1px;}
+  .sim-foot b{color:#fff; font-family:'IBM Plex Mono',monospace; font-size:.76rem;}
+  @media (max-width:420px){ .sim-foot{grid-template-columns:1fr 1fr;} .sim-foot div:last-child{grid-column:1 / -1;} }
+  .badge-row{display:flex; gap:10px; flex-wrap:wrap; margin-bottom:1.2em;}
+  .badge{
+    font-family:'IBM Plex Mono',monospace; font-size:.68rem; letter-spacing:.06em;
+    text-transform:uppercase; padding:5px 10px; border:1px solid var(--navy-line);
+    border-radius:100px; color:#BFE0F2;
+  }
+  .hero h1{ font-size:clamp(1.7rem,5.2vw,3rem); font-weight:600; color:#fff; max-width:20ch;}
+  .hero .tag{ color:#C7E3F2; font-size:clamp(.95rem,2.6vw,1.04rem); max-width:52ch; margin-bottom:1.2em;}
+  .hero-meta{
+    font-family:'IBM Plex Mono',monospace; font-size:clamp(.7rem,2.4vw,.78rem);
+    color:#84AEC8; line-height:1.9;
+    border-top:1px solid #17466B; padding-top:14px; margin-top:20px;
+  }
+
+  section.light{background:var(--foam);}
+  section.alt{background:#E7EFF5;}
+  .divider{height:1px; background:var(--line); max-width:920px; margin:0 auto;}
+
+  /* ---------- CARDS / BOXES ---------- */
+  .card{
+    background:var(--paper); border:1px solid var(--line);
+    border-radius:var(--radius); padding:clamp(18px,4vw,26px); margin:18px 0;
+  }
+  .box-eq{
+    background:#fff; border:1px solid var(--line); border-left:4px solid var(--accent);
+    border-radius:10px; padding:16px 20px; margin:16px 0; overflow-x:auto;
+  }
+  .obs{
+    background:var(--amber-bg); border:1px solid var(--amber-line);
+    border-radius:var(--radius); padding:16px 20px; margin:16px 0;
+  }
+  .obs h3{color:#8A6400; font-size:1.02rem; margin-bottom:.4em;}
+
+  /* ---------- SIR DIAGRAM ---------- */
+  .sir-flow{display:flex; align-items:center; justify-content:center; flex-wrap:wrap; gap:6px; margin:8px 0 4px;}
+  .comp{
+    border-radius:12px; padding:14px 18px; text-align:center; min-width:120px;
+    font-weight:600; border:1.5px solid;
+  }
+  .comp small{display:block; font-weight:500; font-size:.82rem; opacity:.8;}
+  .comp.S{background:#E5F0FA; border-color:var(--S); color:var(--S);}
+  .comp.I{background:#FBE7E7; border-color:var(--I); color:var(--I);}
+  .comp.R{background:#E7F5E7; border-color:var(--R); color:var(--R);}
+  .arrow{display:flex; flex-direction:column; align-items:center; color:var(--ink-soft); font-size:.8rem; min-width:70px;}
+  .arrow .lbl{font-family:'IBM Plex Mono',monospace; font-weight:600; color:var(--ink);}
+  .arrow .line{font-size:1.3rem; line-height:1;}
+  .ntot{ text-align:center; margin:14px auto 0; display:inline-block; width:100%;}
+  .ntot span{ background:#F1F1EC; border:1px solid var(--line); border-radius:8px; padding:6px 14px; font-size:.95rem;}
+
+  /* limitaciones cards */
+  .lim-grid{display:grid; grid-template-columns:repeat(5,1fr); gap:10px; margin-top:12px;}
+  @media (max-width:860px){ .lim-grid{grid-template-columns:repeat(2,1fr);} }
+  @media (max-width:480px){ .lim-grid{grid-template-columns:1fr;} }
+  .lim{
+    background:var(--amber-bg); border:1px solid var(--amber-line);
+    border-radius:10px; padding:12px 13px; font-size:.82rem; color:#5C4A12;
+  }
+  .lim b{display:block; color:#8A6400; margin-bottom:4px; font-size:.86rem;}
+
+  /* ---------- SIMULATOR ---------- */
+  .sim-wrap{display:grid; grid-template-columns:1.15fr .85fr; gap:22px; align-items:start;}
+  @media (max-width:820px){ .sim-wrap{grid-template-columns:1fr;} }
+  .chart-box{background:#fff; border:1px solid var(--line); border-radius:12px; padding:14px;}
+  .controls{background:var(--paper); border:1px solid var(--line); border-radius:12px; padding:18px;}
+  .slider-row{margin-bottom:16px;}
+  .slider-row label{display:flex; justify-content:space-between; font-size:.9rem; font-weight:600; margin-bottom:6px;}
+  .slider-row .val{font-family:'IBM Plex Mono',monospace; color:var(--accent);}
+  input[type=range]{width:100%; accent-color:var(--accent);}
+  .sol-box{margin-top:6px; font-size:.86rem; color:var(--ink-soft); line-height:1.7;}
+  .metric{display:flex; gap:10px; flex-wrap:wrap; margin-top:8px;}
+  .metric .chip{background:#EEF4F9; border:1px solid var(--line); border-radius:8px; padding:6px 10px; font-size:.8rem; font-family:'IBM Plex Mono',monospace;}
+  .btn-reset{
+    margin-top:6px; background:#fff; border:1px solid var(--line); border-radius:8px;
+    padding:8px 14px; font-family:'Inter',sans-serif; font-size:.85rem; cursor:pointer; color:var(--ink);
+  }
+  .btn-reset:hover{border-color:var(--accent);}
+
+  /* ---------- QUESTIONS ---------- */
+  .q-card{ background:var(--paper); border:1px solid var(--line); border-radius:var(--radius); padding:18px 20px; margin-bottom:14px;}
+  .q-card .qnum{
+    display:inline-flex; align-items:center; justify-content:center; width:24px;height:24px;
+    border:1.5px solid var(--navy); border-radius:50%; font-weight:700; font-size:.8rem; color:var(--navy); margin-right:8px; flex:0 0 auto;
+  }
+  .q-card .q{font-weight:600; color:var(--ink);}
+  .q-head{display:flex; align-items:flex-start; margin-bottom:10px;}
+  textarea, input[type=text]{
+    width:100%; border:1px solid var(--line); border-radius:8px; padding:10px 12px;
+    font-family:'Inter',sans-serif; font-size:.9rem; color:var(--ink); resize:vertical; background:#fff;
+  }
+  textarea:focus, input:focus{outline:2px solid var(--accent); outline-offset:1px;}
+  .reveal-btn{
+    margin-top:12px; display:inline-flex; align-items:center; gap:7px;
+    background:var(--navy); color:#fff; border:none; border-radius:100px;
+    padding:9px 18px; font-family:'Inter',sans-serif; font-weight:600; font-size:.86rem; cursor:pointer;
+    transition:background .15s ease, transform .15s ease;
+  }
+  .reveal-btn:hover{background:#0C4C79; transform:translateY(-1px);}
+  .answers{
+    margin-top:14px; border-top:1px dashed var(--line); padding-top:12px;
+    display:none;
+  }
+  .answers.show{display:block; animation:fade .3s ease;}
+  @keyframes fade{from{opacity:0; transform:translateY(-4px);} to{opacity:1; transform:none;}}
+  .answers h4{font-family:'Inter',sans-serif; font-size:.82rem; text-transform:uppercase; letter-spacing:.05em; color:var(--accent); margin:0 0 8px;}
+  .ans-item{display:flex; gap:8px; align-items:flex-start; font-size:.88rem; color:var(--ink-soft); margin-bottom:7px;}
+  .ans-item::before{content:"✓"; color:var(--R); font-weight:700; flex:0 0 auto;}
+  .note{font-size:.82rem; color:var(--ink-soft); font-style:italic;}
+
+  /* embed */
+  .embed-wrap{
+    position:relative; border:1px solid var(--line); border-radius:12px; overflow:hidden;
+    background:#fff; margin-top:14px;
+  }
+  .embed-wrap iframe{width:100%; height:520px; border:0; display:block;}
+  .embed-tag{
+    font-family:'IBM Plex Mono',monospace; font-size:.72rem; color:var(--ink-soft);
+    background:#EEF4F9; border-bottom:1px solid var(--line); padding:6px 12px; display:flex; align-items:center; gap:8px;
+  }
+  .embed-tag .dot{width:8px;height:8px;border-radius:50%;background:var(--amber-line);}
+
+  /* ---------- CTA FORM ---------- */
+  .form-cta{
+    margin-top:8px; background:linear-gradient(160deg,#0C4C79,#03253F);
+    border:1px solid var(--navy-line); border-radius:var(--radius);
+    padding:clamp(24px,5vw,34px); display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:20px;
+  }
+  .form-cta .cta-text{flex:1 1 260px; min-width:0;}
+  .form-cta h3{color:#fff; margin-bottom:.3em; font-size:clamp(1.1rem,3vw,1.4rem);}
+  .form-cta p{color:#C7E3F2; margin:0;}
+  .cta-btn{
+    display:inline-flex; align-items:center; gap:10px; background:var(--amber); color:#3A2C00;
+    font-family:'Inter',sans-serif; font-weight:700; font-size:1rem; text-decoration:none;
+    padding:14px 26px; border-radius:100px; white-space:nowrap;
+    transition:transform .15s ease, box-shadow .15s ease, background .15s ease;
+    box-shadow:0 6px 18px rgba(245,206,89,.3); flex:0 0 auto;
+  }
+  .cta-btn:hover{transform:translateY(-2px); background:#FADB72; box-shadow:0 10px 24px rgba(245,206,89,.42);}
+  .cta-btn:focus-visible{outline:3px solid #C7E3F2; outline-offset:3px;}
+  @media (max-width:520px){ .form-cta{flex-direction:column; align-items:stretch; text-align:center;} .cta-btn{justify-content:center; width:100%;} }
+
+  footer{ background:var(--navy-deep); color:#8FB4CC; text-align:center; padding:36px clamp(18px,5vw,24px); font-size:.82rem;}
+  footer a{color:var(--amber);}
+</style>
+</head>
+<body>
+
+<!-- ============ HERO ============ -->
+<header class="hero">
+  <div class="hero-inner hero-grid">
+    <div class="hero-copy">
+      <div class="badge-row">
+        <span class="badge">Espacio de Interacción Didáctica</span>
+        <span class="badge">Universidad del Bío-Bío · 2026</span>
+      </div>
+      <h1>La Matemática en la Epidemiología</h1>
+      <p class="tag">Una guía interactiva para interpretar, con la noción de derivada, cómo evolucionan en el tiempo los susceptibles, infectados y recuperados de una población mediante el modelo SIR.</p>
+      <div class="hero-meta">
+        Renato Ortiz · Felipe Carrasco · Víctor Díaz<br>
+        IV Seminario Estudiantil de Ecuaciones Diferenciales y Educación Matemática<br>
+        Facultad de Ciencias — Facultad de Educación y Humanidades
+      </div>
+    </div>
+
+    <!-- Simulación animada de agentes SIR -->
+    <div class="hero-sim">
+      <div class="sim-panel">
+        <div class="sim-head">
+          <h3>Modelo SIR</h3>
+          <p class="sim-sub">S → I → R · el contagio recorre la población</p>
+        </div>
+        <div class="sim-bar"><span id="barS"></span><span id="barI"></span><span id="barR"></span></div>
+        <div class="sim-legend">
+          <span><i class="dot dS"></i>S <b id="cntS">0</b></span>
+          <span><i class="dot dI"></i>I <b id="cntI">0</b></span>
+          <span><i class="dot dR"></i>R <b id="cntR">0</b></span>
+        </div>
+        <div class="sim-stage"><canvas id="agentCanvas"></canvas>
+          <div class="sim-time">día <b id="simDay">0</b></div>
+        </div>
+        <div class="sim-foot">
+          <div><i class="dot dI"></i>infecciosos<b>hasta 7 días</b></div>
+          <div><i class="dot dR"></i>al recuperarse<b>inmunidad</b></div>
+          <div><i class="dot dS"></i>reinicia solo<b>al extinguirse</b></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<!-- ============ OBJETIVO + AGENDA ============ -->
+<section class="light">
+  <div class="container">
+    <div class="eyebrow">Sesión</div>
+    <h2 class="section-title">Objetivo y agenda</h2>
+    <div class="card">
+      <p style="margin-top:0"><b>Objetivo de la sesión.</b> Interpretar gráficas de funciones en el contexto de la Epidemiología por medio de un modelo simplificado de ecuaciones diferenciales ordinarias, mostrando una actitud participativa e interés por el aprendizaje.</p>
+      <ol style="margin:0; color:var(--ink-soft);">
+        <li>Lluvia de ideas y simulación del modelo SIR.</li>
+        <li>Motivación: modelo epidemiológico SIR.</li>
+        <li>Interpretación de gráficas.</li>
+        <li>Espacio de reflexión e interacción.</li>
+      </ol>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- ============ LLUVIA DE IDEAS + SIMULADOR EMBEBIDO ============ -->
+<section class="light">
+  <div class="container">
+    <div class="eyebrow">Actividad inicial</div>
+    <h2 class="section-title">Lluvia de ideas</h2>
+    <p class="lead">Conversemos antes de entrar a las ecuaciones. No hay respuestas incorrectas — anota lo primero que se te ocurra.</p>
+
+    <div class="q-card">
+      <div class="q-head"><span class="qnum">1</span><span class="q">¿Qué entiendes por un virus? ¿Cómo se producen los contagios?</span></div>
+      <textarea rows="2" placeholder="Escribe tu respuesta aquí..."></textarea>
+    </div>
+    <div class="q-card">
+      <div class="q-head"><span class="qnum">2</span><span class="q">¿Qué entiendes por una epidemia?</span></div>
+      <textarea rows="2" placeholder="Escribe tu respuesta aquí..."></textarea>
+    </div>
+    <div class="q-card">
+      <div class="q-head"><span class="qnum">3</span><span class="q">¿Existirá alguna forma de representar matemáticamente cómo avanza una epidemia? ¿Para qué servirá?</span></div>
+      <textarea rows="2" placeholder="Escribe tu respuesta aquí..."></textarea>
+    </div>
+    <div class="q-card">
+      <div class="q-head"><span class="qnum">4</span><span class="q">¿Qué tan representativa crees que puede ser la matemática? (Argumenta)</span></div>
+      <textarea rows="2" placeholder="Escribe tu respuesta aquí..."></textarea>
+    </div>
+
+    <h3 style="margin-top:32px; color:var(--navy);">Simulación del modelo SIR</h3>
+    <p class="lead">Explora este simulador para observar cómo se comporta una epidemia. <span class="note">(Versión preliminar — lo seguiremos mejorando.)</span></p>
+    <div class="embed-wrap">
+      <div class="embed-tag"><span class="dot"></span> simulador-sir · complementomatematico.github.io/GUIA_EPI</div>
+      <iframe src="https://complementomatematico.github.io/GUIA_EPI/" title="Simulador SIR" loading="lazy"></iframe>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- ============ MODELO SIR ============ -->
+<section class="alt">
+  <div class="container">
+    <div class="eyebrow">Motivación</div>
+    <h2 class="section-title">Problema: dinámica de una epidemia (modelo SIR)</h2>
+    <p class="lead">El modelo compartimental SIR divide una <b>población total y constante</b> en tres compartimentos y consiste en un <b>sistema de ecuaciones diferenciales ordinarias</b>, donde las tasas de cambio de cada población se escriben como una diferencia entre crecimiento y decrecimiento.</p>
+
+    <div class="card">
+      <h3 style="color:var(--navy); font-size:1.05rem;">Lectura verbal del modelo</h3>
+      <div class="box-eq">
+        $$\underbrace{\frac{dS}{dt}}_{\text{cambio de } S} = -\,\underbrace{\beta\,S\,I}_{\text{contagios}} \qquad
+          \underbrace{\frac{dI}{dt}}_{\text{cambio de } I} = \underbrace{\beta\,S\,I}_{\text{entran}} - \underbrace{\gamma\,I}_{\text{se recuperan}} \qquad
+          \underbrace{\frac{dR}{dt}}_{\text{cambio de } R} = \underbrace{\gamma\,I}_{\text{recuperados}}$$
+      </div>
+      <p style="margin-bottom:0"><b>En palabras:</b> los <span style="color:var(--S); font-weight:600">susceptibles</span> disminuyen al contagiarse ($\beta S I$); los <span style="color:var(--I); font-weight:600">infectados</span> aumentan con los contagios y disminuyen al recuperarse ($\gamma I$); y los <span style="color:var(--R); font-weight:600">recuperados</span> solo crecen. A diferencia del modelo SIRS, <b>aquí no hay retorno</b> de recuperados a susceptibles: la inmunidad es permanente.</p>
+    </div>
+
+    <!-- Diagrama compartimental -->
+    <div class="card" style="text-align:center;">
+      <div class="sir-flow">
+        <div class="comp S">Susceptibles<small>S(t)</small></div>
+        <div class="arrow"><span class="lbl">β S I</span><span class="line">→</span><span>contagio</span></div>
+        <div class="comp I">Infectados<small>I(t)</small></div>
+        <div class="arrow"><span class="lbl">γ I</span><span class="line">→</span><span>recuperación</span></div>
+        <div class="comp R">Recuperados<small>R(t)</small></div>
+      </div>
+      <div class="ntot"><span>Población total: &nbsp;$N = S(t) + I(t) + R(t)$</span></div>
+      <p class="note" style="margin-top:12px;">Figura: enfoque compartimental del modelo SIR. El flujo es unidireccional S → I → R: no existe pérdida de inmunidad.</p>
+    </div>
+
+    <!-- Limitaciones -->
+    <div class="obs">
+      <h3>Observación: limitaciones del modelo SIR</h3>
+      <p style="margin:0 0 4px; font-size:.9rem;">El modelo SIR es una <b>simplificación</b> de la realidad. Entre sus limitaciones:</p>
+      <div class="lim-grid">
+        <div class="lim"><b>(1) Población cerrada</b>No considera nacimientos, muertes naturales ni migración (N fijo).</div>
+        <div class="lim"><b>(2) Inmunidad permanente</b>El recuperado nunca vuelve a ser susceptible (no aparece λR).</div>
+        <div class="lim"><b>(3) Mezcla homogénea</b>Todos tienen igual probabilidad de contacto (ignora redes, edad, geografía).</div>
+        <div class="lim"><b>(4) Parámetros constantes</b>β y γ fijos: no reflejan estaciones, mutaciones ni conducta.</div>
+        <div class="lim"><b>(5) Sin latencia</b>El contagiado es infeccioso de inmediato (no hay etapa "expuesto", como en SEIR).</div>
+      </div>
+    </div>
+
+    <!-- Momento de discusión -->
+    <div class="q-card">
+      <div class="q-head"><span class="qnum">1</span><span class="q">¿Qué significa que un modelo tenga limitaciones?</span></div>
+      <textarea rows="2" placeholder="Escribe tu respuesta aquí..."></textarea>
+    </div>
+    <div class="q-card">
+      <div class="q-head"><span class="qnum">2</span><span class="q">¿Qué podría ocurrir si tratamos de hacer un modelo cada vez más cercano a la realidad?</span></div>
+      <textarea rows="2" placeholder="Escribe tu respuesta aquí..."></textarea>
+      <button class="reveal-btn" data-target="ans-disc">Ver respuestas esperadas</button>
+      <div class="answers" id="ans-disc">
+        <h4>Respuestas esperadas</h4>
+        <div class="ans-item">Que ninguna representación matemática captura toda la realidad: hace supuestos que dejan fuera factores del fenómeno.</div>
+        <div class="ans-item">Al añadir más realismo (más compartimentos y parámetros) el modelo gana precisión pero se vuelve más complejo y difícil de resolver o interpretar.</div>
+        <div class="ans-item">Existe un equilibrio entre simplicidad (comprensible) y realismo (preciso): un buen modelo es "lo bastante simple para entenderlo, lo bastante rico para ser útil".</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- ============ INTERPRETACIÓN DE GRÁFICAS + SIMULADOR PROPIO ============ -->
+<section class="light">
+  <div class="container">
+    <div class="eyebrow">Interpretación de gráficas</div>
+    <h2 class="section-title">Las soluciones del modelo SIR</h2>
+    <p class="lead">Las soluciones de una ecuación diferencial son <b>funciones</b>, y como tales <b>tienen una gráfica</b>. El sistema SIR completo no se resuelve con una fórmula cerrada: aquí lo integramos numéricamente. Mueve los parámetros $\beta$, $\gamma$ e $I_0$ y observa cómo cambian las tres curvas.</p>
+
+    <div class="sim-wrap">
+      <div class="chart-box">
+        <canvas id="sirChart" height="300"></canvas>
+      </div>
+      <div class="controls">
+        <div class="slider-row">
+          <label>β <span class="mono" style="font-weight:400">(tasa de transmisión)</span> <span class="val" id="valBeta">0.40</span></label>
+          <input type="range" id="sliderBeta" min="0.05" max="1.00" step="0.01" value="0.40">
+        </div>
+        <div class="slider-row">
+          <label>γ <span class="mono" style="font-weight:400">(tasa de recuperación)</span> <span class="val" id="valGamma">0.10</span></label>
+          <input type="range" id="sliderGamma" min="0.02" max="0.50" step="0.01" value="0.10">
+        </div>
+        <div class="slider-row">
+          <label>I₀ <span class="mono" style="font-weight:400">(infectados iniciales)</span> <span class="val" id="valI0">10</span></label>
+          <input type="range" id="sliderI0" min="1" max="200" step="1" value="10">
+        </div>
+        <button class="btn-reset" id="resetSim">↺ Restablecer</button>
+        <div class="metric">
+          <span class="chip" id="chipR0">R₀ = 4.0</span>
+          <span class="chip" id="chipPeak">Pico I ≈ —</span>
+        </div>
+        <div class="sol-box" style="margin-top:14px;">
+          <b>N = 1000</b> (población total constante).<br>
+          Condiciones: S₀ = N − I₀, R₀(t=0) = 0.<br>
+          <span class="mono" style="font-size:.8rem;">R₀ = β·N / γ</span> — número reproductivo básico.
+        </div>
+      </div>
+    </div>
+
+    <p class="note" style="margin-top:10px;">Nota: con β = 0 (aislamiento total) la curva de infectados decae exponencialmente, $I(t)=I_0 e^{-\gamma t}$, y S permanece constante. Al aumentar β aparece el brote en forma de campana.</p>
+
+    <h3 style="margin-top:34px; color:var(--navy);">Preguntas sobre la gráfica</h3>
+    <p class="lead">Usando la gráfica de la simulación, responde. Luego pulsa <i>“Ver respuestas esperadas”</i> para contrastar.</p>
+
+    <div class="q-card">
+      <div class="q-head"><span class="qnum">1</span><span class="q">¿Cuál es la población inicial de infectados? (Ubica el valor de $I(t)$ cuando $t=0$).</span></div>
+      <input type="text" placeholder="Tu respuesta">
+    </div>
+    <div class="q-card">
+      <div class="q-head"><span class="qnum">2</span><span class="q">Observando la curva de infectados $I(t)$, ¿crece, decrece o se estabiliza con el paso de los días?</span></div>
+      <input type="text" placeholder="Tu respuesta">
+    </div>
+    <div class="q-card">
+      <div class="q-head"><span class="qnum">3</span><span class="q">¿Qué ocurre con la curva de recuperados $R(t)$ mientras cambia $I(t)$? ¿Hacia qué valor parece estabilizarse?</span></div>
+      <input type="text" placeholder="Tu respuesta">
+    </div>
+    <div class="q-card">
+      <div class="q-head"><span class="qnum">4</span><span class="q">Fijándote en la pendiente de $I(t)$: ¿la tasa de cambio es positiva o negativa? ¿Se hace mayor o menor con el tiempo?</span></div>
+      <input type="text" placeholder="Tu respuesta">
+    </div>
+    <div class="q-card">
+      <div class="q-head"><span class="qnum">5</span><span class="q">¿Qué le ocurre a la población de infectados cuando transcurre mucho tiempo ($t \to \infty$)?</span></div>
+      <input type="text" placeholder="Tu respuesta">
+    </div>
+    <div class="q-card">
+      <div class="q-head"><span class="qnum">6</span><span class="q">La suma $S(t)+I(t)+R(t)$ debe mantenerse constante e igual a $N$. ¿Puedes verificarlo con las tres curvas?</span></div>
+      <input type="text" placeholder="Tu respuesta">
+    </div>
+    <div class="q-card">
+      <div class="q-head"><span class="qnum">7</span><span class="q">En términos de la epidemia, ¿qué significa lo que observas en $I(t)$? ¿Se propaga o tiende a extinguirse?</span></div>
+      <input type="text" placeholder="Tu respuesta">
+    </div>
+
+    <button class="reveal-btn" data-target="ans-graf">Ver respuestas esperadas</button>
+    <div class="answers" id="ans-graf">
+      <h4>Respuestas esperadas</h4>
+      <div class="ans-item"><b style="color:var(--ink)">1.</b>&nbsp; El valor de $I(t)$ en $t=0$ es exactamente $I_0$ (el que fijas con el deslizador; por defecto 10).</div>
+      <div class="ans-item"><b style="color:var(--ink)">2.</b>&nbsp; Con contagio (β&gt;0) primero <b>crece</b> hasta un pico y luego <b>decrece</b>; si β es muy bajo, solo decrece.</div>
+      <div class="ans-item"><b style="color:var(--ink)">3.</b>&nbsp; $R(t)$ solo crece (es monótona creciente) y se estabiliza en un valor cercano a $N$ menos los que nunca se contagiaron.</div>
+      <div class="ans-item"><b style="color:var(--ink)">4.</b>&nbsp; La pendiente es positiva antes del pico y negativa después; en el pico la pendiente es cero. En la fase final se acerca a cero por abajo.</div>
+      <div class="ans-item"><b style="color:var(--ink)">5.</b>&nbsp; $I(t) \to 0$: los infectados terminan desapareciendo porque todos acaban recuperados o no se contagiaron.</div>
+      <div class="ans-item"><b style="color:var(--ink)">6.</b>&nbsp; Sí: al sumar las tres curvas en cualquier instante se obtiene siempre $N$ (la línea total es horizontal).</div>
+      <div class="ans-item"><b style="color:var(--ink)">7.</b>&nbsp; La epidemia crece, alcanza un máximo y se extingue; el brote es más alto y temprano cuanto mayor es β (o menor γ).</div>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- ============ REFLEXIÓN ============ -->
+<section class="alt">
+  <div class="container">
+    <div class="eyebrow">Cierre</div>
+    <h2 class="section-title">Espacio de reflexión e interacción</h2>
+
+    <div class="q-card">
+      <div class="q-head"><span class="qnum">1</span><span class="q">¿Qué utilidad tienen las matemáticas y las ecuaciones diferenciales para comprender el avance de una epidemia?</span></div>
+      <textarea rows="2" placeholder="Escribe tu respuesta aquí..."></textarea>
+    </div>
+    <div class="q-card">
+      <div class="q-head"><span class="qnum">2</span><span class="q">Considerando el enfoque de esta clase, ¿qué entiendes por una derivada?</span></div>
+      <textarea rows="2" placeholder="Escribe tu respuesta aquí..."></textarea>
+      <button class="reveal-btn" data-target="ans-deriv">Ver respuesta esperada</button>
+      <div class="answers" id="ans-deriv">
+        <h4>Respuesta esperada</h4>
+        <div class="ans-item">La derivada es la <b>tasa de cambio instantánea</b> de una función: mide qué tan rápido crece o decrece en cada momento. En la gráfica, corresponde a la <b>pendiente</b> de la curva en ese punto.</div>
+      </div>
+    </div>
+    <div class="q-card">
+      <div class="q-head"><span class="qnum">3</span><span class="q">¿Qué información nos entrega la pendiente de la gráfica de $I(t)$ sobre la velocidad con que cambia la epidemia? Relaciónalo con la idea de derivada.</span></div>
+      <textarea rows="2" placeholder="Escribe tu respuesta aquí..."></textarea>
+      <button class="reveal-btn" data-target="ans-pend">Ver respuesta esperada</button>
+      <div class="answers" id="ans-pend">
+        <h4>Respuesta esperada</h4>
+        <div class="ans-item">La pendiente de $I(t)$ es su derivada $dI/dt$: indica cuántos infectados nuevos aparecen por unidad de tiempo. Pendiente grande y positiva = la epidemia se acelera; pendiente cero = pico (máximo); pendiente negativa = la epidemia retrocede.</div>
+      </div>
+    </div>
+    <div class="q-card">
+      <div class="q-head"><span class="qnum">4</span><span class="q">¿Qué limitaciones crees que tiene el modelo abordado y cómo podría mejorarse para ser más realista?</span></div>
+      <textarea rows="2" placeholder="Escribe tu respuesta aquí..."></textarea>
+      <button class="reveal-btn" data-target="ans-lim">Ver respuestas esperadas</button>
+      <div class="answers" id="ans-lim">
+        <h4>Respuestas esperadas</h4>
+        <div class="ans-item">Supone población cerrada, inmunidad permanente, mezcla homogénea y parámetros constantes, y no incluye periodo de latencia.</div>
+        <div class="ans-item">Se puede mejorar con modelos como SEIR (agrega expuestos), SIRS (reinfección), o incluyendo natalidad/mortalidad, vacunación o β variable en el tiempo.</div>
+      </div>
+    </div>
+    <div class="q-card">
+      <div class="q-head"><span class="qnum">5</span><span class="q">¿Crees que este Espacio de Interacción Didáctica aportó a tu aprendizaje de la Matemática? ¿Cómo fue tu experiencia?</span></div>
+      <textarea rows="2" placeholder="Escribe tu respuesta aquí..."></textarea>
+    </div>
+
+    <!-- CTA Formulario -->
+    <div class="form-cta">
+      <div class="cta-text">
+        <h3>Formulario de experiencia</h3>
+        <p>Cuéntanos cómo viviste esta sesión. Tu opinión nos ayuda a mejorar el material.</p>
+      </div>
+      <a class="cta-btn" href="https://complementomatematico.github.io/FORM_IV_SEDPEM_EID/" target="_blank" rel="noopener noreferrer">
+        Abrir formulario
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+      </a>
+    </div>
+  </div>
+</section>
+
+<footer>
+  Universidad del Bío-Bío · Espacio de Interacción Didáctica · IV Seminario Estudiantil de Ecuaciones Diferenciales y Educación Matemática — 2026
+</footer>
+
+<script>
+Chart.defaults.font.family = "'Inter', sans-serif";
+Chart.defaults.color = "#3D586B";
+
+/* ---------- Simulador SIR con RK4 ---------- */
+const N = 1000, TMAX = 160, DT = 0.5;
+
+function sirDerivs(S, I, R, beta, gamma){
+  // beta se interpreta por-contacto normalizado: usamos beta*S*I/N
+  const dS = -beta * S * I / N;
+  const dI =  beta * S * I / N - gamma * I;
+  const dR =  gamma * I;
+  return [dS, dI, dR];
+}
+
+function simulateSIR(beta, gamma, I0){
+  let S = N - I0, I = I0, R = 0;
+  const t=[], Sa=[], Ia=[], Ra=[];
+  let peak = 0;
+  for(let time=0; time<=TMAX; time+=DT){
+    t.push(time); Sa.push(S); Ia.push(I); Ra.push(R);
+    if(I > peak) peak = I;
+    // RK4
+    const k1 = sirDerivs(S, I, R, beta, gamma);
+    const k2 = sirDerivs(S+0.5*DT*k1[0], I+0.5*DT*k1[1], R+0.5*DT*k1[2], beta, gamma);
+    const k3 = sirDerivs(S+0.5*DT*k2[0], I+0.5*DT*k2[1], R+0.5*DT*k2[2], beta, gamma);
+    const k4 = sirDerivs(S+DT*k3[0], I+DT*k3[1], R+DT*k3[2], beta, gamma);
+    S += DT/6*(k1[0]+2*k2[0]+2*k3[0]+k4[0]);
+    I += DT/6*(k1[1]+2*k2[1]+2*k3[1]+k4[1]);
+    R += DT/6*(k1[2]+2*k2[2]+2*k3[2]+k4[2]);
+    if(S<0) S=0; if(I<0) I=0; if(R<0) R=0;
+  }
+  return {t, S:Sa, I:Ia, R:Ra, peak};
+}
+
+const DEF = {beta:0.40, gamma:0.10, I0:10};
+function pts(t,y){ return t.map((tv,i)=>({x:tv, y:y[i]})); }
+
+let sim = simulateSIR(DEF.beta, DEF.gamma, DEF.I0);
+const sirChart = new Chart(document.getElementById('sirChart'), {
+  type:'line',
+  data:{ datasets:[
+    {label:'S(t)', data:pts(sim.t,sim.S), borderColor:'#005A9C', backgroundColor:'transparent', pointRadius:0, borderWidth:2.2, tension:.15},
+    {label:'I(t)', data:pts(sim.t,sim.I), borderColor:'#C82828', backgroundColor:'#C8282818', fill:true, pointRadius:0, borderWidth:2.4, tension:.15},
+    {label:'R(t)', data:pts(sim.t,sim.R), borderColor:'#228B22', backgroundColor:'transparent', pointRadius:0, borderWidth:2.2, tension:.15}
+  ]},
+  options:{
+    responsive:true, maintainAspectRatio:false, animation:{duration:300},
+    interaction:{mode:'index', intersect:false},
+    plugins:{legend:{display:true, position:'bottom', labels:{boxWidth:14, font:{size:11}}}},
+    scales:{
+      x:{type:'linear', min:0, max:TMAX, title:{display:true, text:'t (días)', font:{size:11}}, ticks:{stepSize:20, font:{size:10}}, grid:{color:'#EBF1F6'}},
+      y:{min:0, max:N, title:{display:true, text:'Individuos', font:{size:11}}, ticks:{font:{size:10}}, grid:{color:'#EBF1F6'}}
+    }
+  }
+});
+
+function refresh(){
+  const beta = parseFloat(document.getElementById('sliderBeta').value);
+  const gamma = parseFloat(document.getElementById('sliderGamma').value);
+  const I0 = parseFloat(document.getElementById('sliderI0').value);
+  document.getElementById('valBeta').textContent = beta.toFixed(2);
+  document.getElementById('valGamma').textContent = gamma.toFixed(2);
+  document.getElementById('valI0').textContent = I0.toFixed(0);
+  sim = simulateSIR(beta, gamma, I0);
+  sirChart.data.datasets[0].data = pts(sim.t, sim.S);
+  sirChart.data.datasets[1].data = pts(sim.t, sim.I);
+  sirChart.data.datasets[2].data = pts(sim.t, sim.R);
+  sirChart.update('none');
+  const R0 = (beta * (N - I0) / N) / gamma; // R0 efectivo ~ beta*S0/(gamma*N)
+  document.getElementById('chipR0').textContent = 'R₀ ≈ ' + R0.toFixed(1);
+  document.getElementById('chipPeak').textContent = 'Pico I ≈ ' + Math.round(sim.peak);
+}
+['sliderBeta','sliderGamma','sliderI0'].forEach(id=>{
+  document.getElementById(id).addEventListener('input', refresh);
+});
+document.getElementById('resetSim').addEventListener('click', ()=>{
+  document.getElementById('sliderBeta').value = DEF.beta;
+  document.getElementById('sliderGamma').value = DEF.gamma;
+  document.getElementById('sliderI0').value = DEF.I0;
+  refresh();
+});
+refresh();
+
+/* ---------- Reveal answers ---------- */
+document.querySelectorAll('.reveal-btn').forEach(btn=>{
+  btn.dataset.orig = btn.textContent;
+  const plural = btn.textContent.includes('respuestas');
+  btn.addEventListener('click', ()=>{
+    const box = document.getElementById(btn.getAttribute('data-target'));
+    const shown = box.classList.toggle('show');
+    btn.textContent = shown ? (plural ? 'Ocultar respuestas' : 'Ocultar respuesta') : btn.dataset.orig;
+  });
+});
+
+/* ---------- Animación de agentes SIR (hero) ---------- */
+(function(){
+  const canvas = document.getElementById('agentCanvas');
+  if(!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const COL = {S:'#2D9CDB', I:'#E8503A', R:'#3FBF6A'};
+  const NUM = 70;          // agentes
+  const RADIUS_INFECT = 28; // radio de contagio (px, en espacio CSS)
+  const BETA = 0.10;        // prob. de contagio por contacto por frame
+  const RECOVER_DAYS = 7;   // días para recuperarse
+  const DAY_PER_SEC = 6;    // velocidad del tiempo
+  const SPEED = 70;         // velocidad de desplazamiento de los agentes
+  let W = 0, Hc = 0, dpr = 1;
+  let agents = [], day = 0, lastTs = 0, resetTimer = 0;
+
+  function resize(){
+    dpr = window.devicePixelRatio || 1;
+    const r = canvas.getBoundingClientRect();
+    W = r.width; Hc = r.height;
+    canvas.width = Math.round(W*dpr);
+    canvas.height = Math.round(Hc*dpr);
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+  }
+
+  function spawn(){
+    agents = [];
+    for(let i=0;i<NUM;i++){
+      agents.push({
+        x: Math.random()*W, y: Math.random()*Hc,
+        vx:(Math.random()-.5)*SPEED, vy:(Math.random()-.5)*SPEED,
+        state:'S', tInf:0
+      });
+    }
+    // 3 infectados iniciales
+    for(let k=0;k<3;k++){ agents[(Math.random()*NUM)|0].state='I'; }
+    day = 0; resetTimer = 0;
+  }
+
+  function step(dt){
+    day += dt*DAY_PER_SEC;
+    for(const a of agents){
+      a.x += a.vx*dt; a.y += a.vy*dt;
+      if(a.x<0){a.x=0;a.vx*=-1;} if(a.x>W){a.x=W;a.vx*=-1;}
+      if(a.y<0){a.y=0;a.vy*=-1;} if(a.y>Hc){a.y=Hc;a.vy*=-1;}
+      if(a.state==='I'){
+        a.tInf += dt*DAY_PER_SEC;
+        if(a.tInf >= RECOVER_DAYS) a.state='R';
+      }
+    }
+    // contagios
+    for(let i=0;i<agents.length;i++){
+      if(agents[i].state!=='I') continue;
+      for(let j=0;j<agents.length;j++){
+        if(agents[j].state!=='S') continue;
+        const dx=agents[i].x-agents[j].x, dy=agents[i].y-agents[j].y;
+        if(dx*dx+dy*dy < RADIUS_INFECT*RADIUS_INFECT){
+          if(Math.random() < BETA) { agents[j].state='I'; agents[j].tInf=0; }
+        }
+      }
+    }
+  }
+
+  function counts(){
+    let s=0,i=0,r=0;
+    for(const a of agents){ if(a.state==='S')s++; else if(a.state==='I')i++; else r++; }
+    return {s,i,r};
+  }
+
+  function draw(){
+    ctx.clearRect(0,0,W,Hc);
+    // primero S y R, luego I (con glow) encima
+    for(const a of agents){
+      if(a.state==='I') continue;
+      ctx.beginPath(); ctx.arc(a.x,a.y,5,0,Math.PI*2);
+      ctx.fillStyle = a.state==='S'?COL.S:COL.R; ctx.fill();
+      ctx.lineWidth=1.5; ctx.strokeStyle='rgba(255,255,255,.25)'; ctx.stroke();
+    }
+    for(const a of agents){
+      if(a.state!=='I') continue;
+      const g=ctx.createRadialGradient(a.x,a.y,1,a.x,a.y,14);
+      g.addColorStop(0,'rgba(232,80,58,.55)'); g.addColorStop(1,'rgba(232,80,58,0)');
+      ctx.beginPath(); ctx.arc(a.x,a.y,14,0,Math.PI*2); ctx.fillStyle=g; ctx.fill();
+      ctx.beginPath(); ctx.arc(a.x,a.y,5.5,0,Math.PI*2); ctx.fillStyle=COL.I; ctx.fill();
+    }
+  }
+
+  function updateHUD(){
+    const c = counts();
+    const tot = c.s+c.i+c.r || 1;
+    document.getElementById('cntS').textContent = c.s;
+    document.getElementById('cntI').textContent = c.i;
+    document.getElementById('cntR').textContent = c.r;
+    document.getElementById('simDay').textContent = day.toFixed(1);
+    document.getElementById('barS').style.width = (100*c.s/tot)+'%';
+    document.getElementById('barI').style.width = (100*c.i/tot)+'%';
+    document.getElementById('barR').style.width = (100*c.r/tot)+'%';
+    return c;
+  }
+
+  function loop(ts){
+    if(!lastTs) lastTs=ts;
+    let dt=(ts-lastTs)/1000; lastTs=ts;
+    if(dt>0.05) dt=0.05; // clamp
+    step(dt);
+    draw();
+    const c=updateHUD();
+    if(c.i===0){ // epidemia extinta -> pausa breve y reinicia
+      resetTimer += dt;
+      if(resetTimer>2.2) spawn();
+    }
+    requestAnimationFrame(loop);
+  }
+
+  const ro = new ResizeObserver(()=>resize());
+  ro.observe(canvas);
+  resize(); spawn();
+  requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>
